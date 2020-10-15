@@ -11,13 +11,13 @@ export default new Vuetify({
         dark: localStorage.darkTheme === 'true',
         themes: {
             dark: {
-                primary: '#f34404',
+                primary: '#ff9225',
                 foreground: '#ffffff',
                 primaryLight: '#2a2a2b',
                 secondary: '#3364e0',
             },
             light: {
-                primary: '#f34404',
+                primary: '#f38704',
                 foreground: '#1a1a1a',
                 primaryLight: '#f1efef',
                 secondary: '#1b40c7',
