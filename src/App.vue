@@ -1,23 +1,13 @@
 <template>
     <v-app class="app">
-        <v-app-bar app>Sudoku</v-app-bar>
+        <tool-bar></tool-bar>
         <v-navigation-drawer
                 v-if="$store.getters.scale >= 2"
                 v-model="drawer"
                 :permanent="true"
                 app
                 absolute>
-            <h1>Hello</h1>
-            <v-list dense nav class="py-0">
-                <v-list-item :to="link.to" exact v-for="link in navigation">
-                    <v-list-item-icon>
-                        <v-icon color="primary">{{link.icon}}</v-icon>
-                    </v-list-item-icon>
-                    <v-list-item-content>
-                        <v-list-item-title>{{link.name}}</v-list-item-title>
-                    </v-list-item-content>
-                </v-list-item>
-            </v-list>
+            <nav-content :navigation="navigation"></nav-content>
         </v-navigation-drawer>
         <v-main>
             <router-view></router-view>
@@ -37,15 +27,14 @@
 </template>
 
 <script>
+    import NavContent from "@/components/NavContent";
+    import ToolBar from "@/components/ToolBar";
+
     export default {
         name: 'App',
-        components: {},
+        components: {ToolBar, NavContent},
         data: () => ({
             drawer: true,
-            navigation: [
-                {icon: 'mdi-play-circle', to: '/', name: 'Hello'},
-                {icon: 'mdi-grid-large', to: '/about', name: 'About'},
-            ]
         }),
         mounted() {
             window.addEventListener('resize', this.setWindowWidth);
@@ -58,11 +47,25 @@
                 this.$store.commit('windowWidth', window.innerWidth)
             },
         },
+        computed: {
+            navigation() {
+                let search = this.$store.getters.scale < 2 ? [{
+                    icon: 'mdi-magnify',
+                    to: '/search',
+                    name: 'Search'
+                }] : [];
+                return [
+                    {icon: 'mdi-earth', to: '/', name: 'Browse'},
+                    {icon: 'mdi-puzzle-plus-outline', to: '/create', name: 'Create Sudoku'},
+                    ...search,
+                ]
+            },
+        }
     };
 </script>
 <style>
-    @import url('https://fonts.googleapis.com/css?family=Roboto:400,400i,500,600,700,800,900&display=swap');
-    @import url('https://cdn.materialdesignicons.com/5.0.45/css/materialdesignicons.min.css');
+    @import url('//fonts.googleapis.com/css?family=Roboto:400,400i,500,600,700,800,900&display=swap');
+    @import url('//cdn.materialdesignicons.com/5.0.45/css/materialdesignicons.min.css');
 
     .app {
         user-select: none;
