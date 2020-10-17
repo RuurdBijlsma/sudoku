@@ -19,7 +19,7 @@
             puzzle: new Puzzle(),
         }),
         mounted() {
-            let puzzle = Puzzle.presets.getSudoku(9, 12, 3);
+            let puzzle = Puzzle.presets.getSudoku(9, 9, 3);
             puzzle.domains[[3, 4]] = [4];
             puzzle.colors[[3, 4]] = 'rgba(51,132,224,0.27)';
             puzzle.domains[[5, 4]] = [4, 5, 6];
@@ -44,6 +44,7 @@
 
 <style scoped>
     .create-preset {
+        height:100%;
         padding: 20px;
     }
 </style>
