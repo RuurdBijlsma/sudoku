@@ -6,7 +6,7 @@
         </div>
 
         <v-list dense nav class="py-0">
-            <v-list-item :to="link.to" exact v-for="link in navigation">
+            <v-list-item :to="link.to" exact v-for="link in navigation" :key="link.to">
                 <v-list-item-icon>
                     <v-icon color="primary">{{link.icon}}</v-icon>
                 </v-list-item-icon>
