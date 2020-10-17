@@ -17,7 +17,7 @@
             },
             padding: {
                 type: Object,
-                default: () => ({topLeft: 210, bottomRight: 100}),
+                default: () => ({top: 0, left: 50, bottom: 0, right: 0}),
             },
         },
         data: () => ({
@@ -44,11 +44,11 @@
                 if (this.puzzle === null || this.width === 0 || this.height === 0)
                     return;
 
-                let boxWidth = this.canvas.width - (this.padding.topLeft + this.padding.bottomRight);
-                let boxHeight = this.canvas.height - (this.padding.topLeft + this.padding.bottomRight);
+                let boxWidth = this.canvas.width - (this.padding.left + this.padding.right);
+                let boxHeight = this.canvas.height - (this.padding.top + this.padding.bottom);
                 let box = {
-                    x: 1 + this.padding.topLeft,
-                    y: 1 + this.padding.topLeft,
+                    x: 1 + this.padding.left,
+                    y: 1 + this.padding.top,
                     width: boxWidth,
                     height: boxHeight,
                 }
@@ -197,9 +197,10 @@
                 let canvas = this.canvas;
                 let {width} = canvas.getBoundingClientRect();
                 canvas.width = width;
-                let puzzleWidth = width - this.padding.topLeft - this.padding.bottomRight;
+                let puzzleWidth = width - this.padding.left - this.padding.right;
                 console.log({puzzleWidth})
-                canvas.height = (this.height / this.width) * (puzzleWidth) + this.padding.topLeft + this.padding.bottomRight;
+                let puzzleHeight = (this.height / this.width) * puzzleWidth
+                canvas.height = puzzleHeight + this.padding.top + this.padding.bottom;
             },
             async processBackgroundLayers() {
                 for (let i = 0; i < this.puzzle.backgroundLayers.length; i++) {
