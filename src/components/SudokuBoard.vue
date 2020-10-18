@@ -1,38 +1,114 @@
 <template>
-    <canvas v-if="puzzle !== null" ref="canvas" class="canvas"></canvas>
+    <canvas
+            @click="clickCanvas"
+            @mousedown="mouseDown"
+            v-if="puzzle !== null"
+            ref="canvas"
+            class="canvas"
+            :style="{
+                cursor,
+            }"
+    ></canvas>
 </template>
 
 <script>
-    import {Puzzle} from "puzzle-solver";
-    import GridCell from "@/js/GridCell";
+    import {mapGetters, mapState} from "vuex";
 
     export default {
         name: "SudokuBoard",
         props: {
-            puzzle: {
-                type: Puzzle,
-                default: null,
-            },
             padding: {
                 type: Object,
-                default: () => ({top: 0, left: 0, bottom: 0, right: 0}),
+                default: () => ({top: 10, left: 10, bottom: 10, right: 10}),
             },
         },
         data: () => ({
             animationFrame: -1,
             canvas: null,
             context: null,
+            isMouseDown: false,
+            box: {x: 0, y: 0, width: 0, height: 0},
+            cursor: 'default',
         }),
         mounted() {
             this.canvas = this.$refs.canvas;
             this.context = this.canvas.getContext('2d', {alpha: false});
             this.processPuzzle();
             this.render();
+
+            document.addEventListener('mousemove', this.mouseMove, false);
+            document.addEventListener('mouseup', this.mouseUp, false);
         },
         beforeDestroy() {
             cancelAnimationFrame(this.animationFrame);
+            document.removeEventListener('mousemove', this.mouseMove);
+            document.removeEventListener('mouseup', this.mouseUp);
         },
         methods: {
+            highlight(cell) {
+                if (!this.highlightedCells.includes(cell))
+                    this.highlightedCells.push(cell);
+            },
+            unhighlight(cell) {
+                let index = this.highlightedCells.indexOf(cell);
+                if (index !== -1)
+                    this.highlightedCells.splice(index, 1);
+            },
+            mouseDown(e) {
+                this.isMouseDown = true;
+                if (!e.shiftKey && !e.ctrlKey)
+                    this.highlightedCells.splice(0, this.highlightedCells.length);
+
+                let [, , puzzleX, puzzleY] = this.eventToPos(e);
+                let cellSize = this.box.width / this.width;
+                let [cellX, cellY] = [Math.floor(puzzleX / cellSize), Math.floor(puzzleY / cellSize)];
+                if (this.grid[cellY] && this.grid[cellY][cellX]) {
+                    if (!e.ctrlKey)
+                        this.highlight(this.grid[cellY][cellX]);
+                    else
+                        this.unhighlight(this.grid[cellY][cellX]);
+                }
+            },
+            mouseMove(e) {
+                let [x, y] = this.eventToPos(e);
+                if (x > this.box.x && y > this.box.y && x < this.box.x + this.box.width && y < this.box.y + this.box.height) {
+                    this.cursor = 'pointer';
+                } else {
+                    this.cursor = 'default';
+                }
+                if (this.isMouseDown)
+                    this.dragCanvas(e);
+            },
+            mouseUp(e) {
+                this.isMouseDown = false;
+                this.dragCanvas(e);
+            },
+            eventToPos(e) {
+                if (!this.canvas)
+                    return [0, 0];
+                let {left, top} = this.canvas.getBoundingClientRect();
+                let x = e.pageX - left;
+                let y = e.pageY - top;
+                let puzzleX = x - this.box.x;
+                let puzzleY = y - this.box.y;
+                return [x, y, puzzleX, puzzleY];
+            },
+            dragCanvas(e) {
+                let [, , puzzleX, puzzleY] = this.eventToPos(e);
+                let cellSize = this.box.width / this.width;
+                let [cellX, cellY] = [puzzleX / cellSize, puzzleY / cellSize];
+                let [offX, offY] = [cellX % 1, cellY % 1];
+                [cellX, cellY] = [Math.floor(cellX), Math.floor(cellY)];
+                if (this.grid[cellY] && this.grid[cellY][cellX]) {
+                    let dist = Math.sqrt((offX - 0.5) ** 2 + (offY - 0.5) ** 2);
+                    if (dist <= 0.5 && !e.ctrlKey)  // Within radius 0.5 of center of cell
+                        this.highlight(this.grid[cellY][cellX]);
+                    else if (dist <= 0.5)
+                        this.unhighlight(this.grid[cellY][cellX]);
+                }
+            },
+            clickCanvas(e) {
+            },
             render() {
                 this.animationFrame = requestAnimationFrame(() => this.render());
 
@@ -42,27 +118,31 @@
                 if (this.puzzle === null || this.width === 0 || this.height === 0)
                     return;
 
-                let boxWidth = this.canvas.width - (this.padding.left + this.padding.right);
-                let boxHeight = this.canvas.height - (this.padding.top + this.padding.bottom);
-                let box = {
-                    x: 1 + this.padding.left,
-                    y: 1 + this.padding.top,
-                    width: boxWidth - 1,
-                    height: boxHeight - 1,
-                }
-                this.renderCells(box);
+                this.renderCells(this.box);
                 for (let layer of this.puzzle.backgroundLayers) {
                     switch (layer) {
                         case 'grid':
-                            this.renderGrid(box);
+                            this.renderGrid(this.box);
                             break;
                         case 'sudokuBoxes':
-                            this.renderBoxes(box);
+                            this.renderBoxes(this.box);
                             break;
                         default:
                             this.renderImage(layer);
                             break;
                     }
+                }
+                this.renderHighlightedCells(this.box);
+            },
+            renderHighlightedCells(box) {
+                this.context.fillStyle = 'rgba(104,104,104,0.25)';
+                let cellSize = box.width / this.width;
+                for (let cell of this.highlightedCells) {
+                    this.context.fillRect(
+                        box.x + cell.x * cellSize,
+                        box.y + cell.y * cellSize,
+                        cellSize, cellSize,
+                    );
                 }
             },
             renderCells(box) {
@@ -70,8 +150,8 @@
 
                 for (let cell of this.flatGrid) {
                     // Colors
-                    if (cell.color !== null) {
-                        this.context.fillStyle = cell.color;
+                    if (cell.hasColor) {
+                        this.context.fillStyle = cell.hasUserColor ? cell.user.color : cell.color;
                         this.context.fillRect(
                             box.x + cell.x * cellSize,
                             box.y + cell.y * cellSize,
@@ -80,23 +160,36 @@
                     }
 
                     // Domain
-                    if (cell.domain.length === 1) {
-                        this.context.fillStyle = this.themeColors.softForeground;
+                    if (cell.hasValue) {
+                        this.context.fillStyle = cell.hasUserValue ?
+                            this.themeColors.secondary :
+                            this.themeColors.softForeground;
                         let height = cellSize / 1.5;
                         this.context.font = `${height}px Arial`;
-                        let {width} = this.context.measureText(cell.domain[0])
+                        let text = cell.hasUserValue ? [...cell.user.domain][0] : cell.domain[0];
+                        let {width} = this.context.measureText(text)
                         this.context.fillText(
-                            cell.domain[0],
+                            text,
                             box.x + cell.x * cellSize + cellSize / 2 - width / 2,
                             box.y + cell.y * cellSize + cellSize / 2 + height / 3,
                             cellSize
                         );
-                    } else if (cell.domain.length < this.maxDomainLength) {
-                        this.context.fillStyle = this.themeColors.secondary;
+                    }
+                    // User Domain
+                    if (!cell.hasValue && (cell.hasUserDomain || cell.hasSetDomain(this.maxDomainLength))) {
+                        this.context.fillStyle = cell.hasUserDomain ?
+                            this.themeColors.secondary :
+                            this.themeColors.softForeground;
                         let height = cellSize / 4.5;
                         this.context.font = `600 ${height}px Arial`;
                         // let text = [1,2,3,4,5,6,7,8].join(' ');
-                        let text = cell.domain.join(' ');
+                        let arr;
+                        if (cell.hasUserDomain) {
+                            arr = Array.from(cell.user.domain);
+                        } else {
+                            arr = [...cell.domain];
+                        }
+                        let text = arr.sort().join(' ');
                         let {width} = this.context.measureText(text);
                         let lines = [text];
                         if (width > cellSize * 0.8) {
@@ -114,22 +207,29 @@
                         }
                     }
 
-                    let positions = [
-                        [0, 0],
-                        [1, 0],
-                        [1, 1],
-                        [0, 1],
-                        [0.5, 0],
-                        [1, 0.5],
-                        [0.5, 1],
-                        [0, 0.5],
-                    ]
                     // Pencil marks
-                    if (cell.pencilMarks.length > 0) {
-                        this.context.fillStyle = this.themeColors.secondary;
+                    if (cell.hasPencilMarks && !cell.hasValue) {
+                        let positions = [
+                            [0, 0],
+                            [1, 0],
+                            [1, 1],
+                            [0, 1],
+                            [0.5, 0],
+                            [1, 0.5],
+                            [0.5, 1],
+                            [0, 0.5],
+                        ]
+                        this.context.fillStyle = cell.hasUserPencilMarks ?
+                            this.themeColors.secondary :
+                            this.themeColors.softForeground;
                         let height = cellSize / 4.5;
                         this.context.font = `600 ${height}px Arial`;
-                        let marks = [...cell.pencilMarks].sort();
+                        let marks;
+                        if (cell.hasUserPencilMarks) {
+                            marks = [...cell.user.pencilMarks].sort();
+                        } else {
+                            marks = [...cell.pencilMarks].sort();
+                        }
                         for (let i = 0; i < marks.length; i++) {
                             let [posX, posY] = positions[i % positions.length];
                             let {width} = this.context.measureText(marks[i]);
@@ -198,6 +298,15 @@
                 let puzzleWidth = width - this.padding.left - this.padding.right;
                 let puzzleHeight = (this.height / this.width) * puzzleWidth
                 canvas.height = puzzleHeight + this.padding.top + this.padding.bottom;
+
+                let boxWidth = this.canvas.width - (this.padding.left + this.padding.right);
+                let boxHeight = this.canvas.height - (this.padding.top + this.padding.bottom);
+                this.box = {
+                    x: 1 + this.padding.left,
+                    y: 1 + this.padding.top,
+                    width: boxWidth - 1,
+                    height: boxHeight - 1,
+                }
             },
             async processBackgroundLayers() {
                 for (let i = 0; i < this.puzzle.backgroundLayers.length; i++) {
@@ -231,59 +340,20 @@
             themeColors() {
                 return this.$vuetify.theme.themes[this.$vuetify.theme.isDark ? 'dark' : 'light'];
             },
-            maxDomainLength() {
-                let max = 0;
-                for (let cell of this.flatGrid)
-                    if (cell.domain.length > max) max = cell.domain.length;
-                return max;
-            },
-            blockSize() {
-                let blockConstraint = this.puzzle.constraints.find(c => c.name.includes('Block'));
-                return Math.sqrt(blockConstraint.cells.length);
-            },
-            hasBoxes() {
-                return !!this.puzzle.constraints.find(c => c.name.includes('Block'));
-            },
-            width() {
-                if (!this?.grid[0])
-                    return;
-                return this.grid[0].length;
-            },
-            height() {
-                if (!this.grid)
-                    return 0;
-                return this.grid.length;
-            },
-            flatGrid() {
-                if (!this.grid)
-                    return [];
-                return this.grid.flat();
-            },
-            grid() {
-                if (this.puzzle === null)
-                    return [[]];
-                let visibleCells = this.puzzle.visibleCells;
-                if (visibleCells.length === 0)
-                    return [[]];
-
-                let cells = {};
-                let maxX = 0, maxY = 0;
-                for (let cell of visibleCells) {
-                    let [x, y] = cell.split(',').map(n => +n);
-                    if (x > maxX) maxX = x;
-                    if (y > maxY) maxY = y;
-                    cells[cell] = new GridCell(
-                        x, y,
-                        this.puzzle.domains[cell],
-                        this.puzzle.pencilMarks[cell],
-                        this.puzzle.colors[cell],
-                    );
-                }
-
-                let width = maxX + 1,
-                    height = maxY + 1;
-                return [...Array(height)].map((_, y) => [...Array(width)].map((_, x) => cells[[x, y]]));
-            }
+            ...mapState({
+                puzzle: state => state.sudoku.puzzle,
+                highlightedCells: state => state.sudoku.highlightedCells,
+                mode: state => state.sudoku.mode,
+            }),
+            ...mapGetters([
+                'maxDomainLength',
+                'blockSize',
+                'hasBoxes',
+                'width',
+                'height',
+                'flatGrid',
+                'grid',
+            ])
         }
     }
 </script>

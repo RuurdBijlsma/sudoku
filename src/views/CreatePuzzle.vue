@@ -1,6 +1,6 @@
 <template>
     <div class="create-preset">
-        <sudoku :puzzle="puzzle"></sudoku>
+        <sudoku></sudoku>
     </div>
 </template>
 
@@ -26,15 +26,11 @@
             puzzle.domains[[6, 4]] = [4, 5, 6];
             puzzle.domains[[7, 4]] = [4, 5, 6];
             puzzle.pencilMarks[[3, 3]] = [1, 2, 3, 7, 8];
-            puzzle.domains[[3, 3]] = [1, 2, 3, 4 ];
+            puzzle.domains[[3, 3]] = [1, 2, 3, 4];
             puzzle.colors[[4, 3]] = 'red';
             puzzle.colors[[5, 3]] = 'rgba(196,82,82,0.8)';
             puzzle.colors[[5, 6]] = '#d5d55a';
-            this.puzzle = puzzle;
-            console.log(this.puzzle);
-
-            // console.log(sudoku, sudoku.solve(5));
-            // todo visualize this sudoku
+            this.$store.commit('puzzle', puzzle);
         },
         methods: {},
         watch: {},
@@ -44,7 +40,7 @@
 
 <style scoped>
     .create-preset {
-        height:100%;
+        height: 100%;
         padding: 20px;
     }
 </style>

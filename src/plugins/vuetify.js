@@ -15,7 +15,7 @@ export default new Vuetify({
                 foreground: '#ffffff',
                 softForeground: '#c6c6c6',
                 primaryLight: '#19191a',
-                secondary: '#7bbeea',
+                secondary: '#3ac7ab',
             },
             light: {
                 primary: '#f35804',

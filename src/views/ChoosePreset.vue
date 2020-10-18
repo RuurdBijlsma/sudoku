@@ -3,7 +3,7 @@
         <h2>Choose preset</h2>
         <v-divider class="ma-4"></v-divider>
         <div class="cards">
-            <v-card v-for="preset in presets">
+            <v-card v-for="preset in presets" :key="preset.id">
                 <v-img src="../assets/sudoku.png"
                        height="200px"
                        width="300px"></v-img>

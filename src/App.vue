@@ -18,7 +18,7 @@
                 grow
                 :shift="true"
                 app>
-            <v-btn :to="link.to" exact v-for="link in navigation">
+            <v-btn :key="link.to" :to="link.to" exact v-for="link in navigation">
                 <span>{{link.name}}</span>
                 <v-icon>{{link.icon}}</v-icon>
             </v-btn>
@@ -37,6 +37,7 @@
             drawer: true,
         }),
         mounted() {
+            console.log(this.$store);
             window.addEventListener('resize', this.setWindowWidth);
         },
         beforeDestroy() {
