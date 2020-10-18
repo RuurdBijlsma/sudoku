@@ -1,7 +1,7 @@
 <template>
     <div class="logo">
         <img class="logo-image"
-             :src="$vuetify.theme.dark ? './img/foreground.png' : './img/3d.png'"
+             :src="$vuetify.theme.dark ? './img/foreground.png' : './img/foreground-light.png'"
              alt="logo image"/>
         <span class="name" v-if="!hideName">Sudoku</span>
     </div>

@@ -5,7 +5,7 @@
 </template>
 
 <script>
-    import {Puzzle} from 'puzzle-solver';
+    import {Puzzle, PuzzleConstraint} from 'puzzle-solver';
     import Sudoku from "@/components/Sudoku";
 
     export default {
@@ -21,15 +21,18 @@
         mounted() {
             let puzzle = Puzzle.presets.getSudoku(9, 9, 3);
             puzzle.domains[[3, 4]] = [4];
-            puzzle.colors[[3, 4]] = 'rgba(51,132,224,0.27)';
-            puzzle.domains[[5, 4]] = [4, 5, 6];
-            puzzle.domains[[6, 4]] = [4, 5, 6];
-            puzzle.domains[[7, 4]] = [4, 5, 6];
+            puzzle.domains[[4, 4]] = [5];
+            puzzle.domains[[4, 5]] = [6];
+            puzzle.domains[[5, 6]] = [4];
+            // puzzle.domains[[6, 4]] = [4, 5, 6];
+            // puzzle.domains[[7, 4]] = [4, 5, 6];
             puzzle.pencilMarks[[3, 3]] = [1, 2, 3, 7, 8];
             puzzle.domains[[3, 3]] = [1, 2, 3, 4];
-            puzzle.colors[[4, 3]] = 'red';
-            puzzle.colors[[5, 3]] = 'rgba(196,82,82,0.8)';
-            puzzle.colors[[5, 6]] = '#d5d55a';
+            let knight = new PuzzleConstraint('Knights move', 'knightsMove');
+            let king = new PuzzleConstraint('Kings move', 'kingsMove');
+            puzzle.addConstraint(king)
+            puzzle.addConstraint(knight)
+            console.log(Puzzle, puzzle, knight)
             this.$store.commit('puzzle', puzzle);
         },
         methods: {},

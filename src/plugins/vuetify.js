@@ -12,6 +12,12 @@ export default new Vuetify({
         themes: {
             dark: {
                 primary: '#ff9225',
+                sudoku: {
+                    highlight: '#FFFFFF33',
+                    constrained: '#FF000066',
+                    same: '#00FF0033',
+                    relevant: '#00FFFF33',
+                },
                 foreground: '#ffffff',
                 softForeground: '#c6c6c6',
                 primaryLight: '#19191a',
@@ -19,6 +25,12 @@ export default new Vuetify({
             },
             light: {
                 primary: '#f35804',
+                sudoku: {
+                    highlight: '#00000033',
+                    constrained: '#DD7700FF',
+                    same: '#00FF0033',
+                    relevant: '#00FFFF33',
+                },
                 foreground: '#1a1a1a',
                 softForeground: '#282828',
                 primaryLight: '#f1efef',
