@@ -124,6 +124,8 @@
     //check keep
     //solve puzzle
     //move solver to worker
+    //show rules on current sudoku when playing
+    //add editable prop to sudoku.vue to show Create panel and stuff
 
     export default {
         name: "Sudoku",
