@@ -1,7 +1,7 @@
 <template>
     <div>
         <v-list-group
-                v-if="group !== null"
+                v-if="group !== null && group !== ''"
                 v-for="(value, key) in children"
                 :key="key"
                 no-action
@@ -11,7 +11,7 @@
                 <v-list-item-title>{{key}}</v-list-item-title>
             </template>
             <div>
-                <constraint-group sub-group :group="value" v-if="key !== 'constraints'"></constraint-group>
+                <constraint-group :editable="editable" sub-group :group="value" v-if="key !== 'constraints'"></constraint-group>
             </div>
         </v-list-group>
         <v-list-item :style="{
@@ -23,11 +23,20 @@
                 <v-list-item-title>{{constraint.name}}</v-list-item-title>
                 <v-list-item-subtitle>{{constraint.type}}</v-list-item-subtitle>
             </v-list-item-content>
+            <v-list-item-action v-if="editable">
+                <v-btn :color="editingConstraint===constraint ? 'primary' : 'default'"
+                       icon
+                       @click="toggleEditConstraint(constraint)">
+                    <v-icon>mdi-puzzle-edit-outline</v-icon>
+                </v-btn>
+            </v-list-item-action>
         </v-list-item>
     </div>
 </template>
 
 <script>
+    import {mapState} from "vuex";
+
     export default {
         name: "ConstraintGroup",
         props: {
@@ -39,11 +48,19 @@
                 type: Boolean,
                 default: false,
             },
+            editable: {
+                type: Boolean,
+                default: false,
+            },
         },
         mounted() {
             console.log("group", this.group);
         },
         methods: {
+            toggleEditConstraint(constraint) {
+                this.$store.commit('editingConstraint', this.editingConstraint === constraint ? null : constraint)
+                this.$store.dispatch('updateRelevantConstraints');
+            },
             stopVisualize() {
                 this.$store.commit('constraintCells', []);
             },
@@ -65,7 +82,10 @@
                 let group = {...this.group};
                 delete group.constraints;
                 return group;
-            }
+            },
+            ...mapState({
+                editingConstraint: state => state.sudoku.editingConstraint,
+            }),
         },
     }
 </script>

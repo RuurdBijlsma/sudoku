@@ -32,7 +32,6 @@
 
     // TODO
     // Create puzzle stuff,
-    // show list of constraints,
     // add constraint to selected cells or global constraint
     // allow resize of panels
     //add keybinds for more stuff
@@ -40,12 +39,13 @@
     //check keep
     //solve puzzle
     //move solver to worker
-    //show rules on current sudoku when playing
     //add editable prop to sudoku.vue to show Create panel and stuff
     //add mobile support
     //check if parameter count of custom function matches selected variable count
     //allow edit? and remove constraints
     //change constraint default name to programmatically determine that also in list show that name
+    // add visuals for cages/thermometers
+    //show direction of constraint cells
 
     export default {
         name: "Sudoku",
@@ -71,33 +71,6 @@
             document.removeEventListener('mouseup', this.mouseUp);
         },
         methods: {
-            updateRelevantConstraints() {
-                if (this.selectedCells.length === 0)
-                    return this.$store.commit('constrainedCells', []);
-
-                let hCells = this.selectedCells.map(c => [c.x, c.y].toString());
-                let constraintsOnCell = {};
-                for (let hCell of hCells) {
-                    [...new Set(
-                        this.puzzle.usableConstraints
-                            .filter(c => c.variables.find(c => c.toString() === hCell))
-                            .flatMap(c => c.variables)
-                            .map(c => c.toString())
-                            .filter(c => hCell !== c)
-                    )].forEach(c => {
-                        if (!constraintsOnCell[c])
-                            constraintsOnCell[c] = 0;
-                        constraintsOnCell[c]++;
-                    });
-                }
-                let constrainedCells = [];
-                for (let key in constraintsOnCell)
-                    if (constraintsOnCell[key] === hCells.length) {
-                        let [x, y] = key.split(',').map(n => +n);
-                        constrainedCells.push(this.grid[y][x]);
-                    }
-                this.$store.commit('constrainedCells', constrainedCells);
-            },
             select(cell) {
                 if (!this.selectedCells.includes(cell)) {
                     this.selectedCells.push(cell);
@@ -175,7 +148,7 @@
                     this.setCellsValue({type: this.mode, value: key});
                 }
             },
-            ...mapActions(['setCellsValue', 'updateCellInfo', 'updateRelevantCells', 'clearCells']),
+            ...mapActions(['setCellsValue', 'updateCellInfo', 'updateRelevantCells', 'updateRelevantConstraints', 'clearCells']),
         },
         watch: {
             selectedCells() {
@@ -206,7 +179,7 @@
                 //     let cell = this.grid[y][x];
                 //     let value = result.solutions[0][key];
                 //     cell.user.domain.clear();
-                //     cell.user.domain.add(value);
+                //     cell.user.domain.add(value.toString());
                 // }
             },
         },
@@ -250,6 +223,7 @@
         flex-grow: 1;
         display: flex;
         flex-direction: column;
+        max-width: 800px;
     }
 
     .possible-values {
@@ -260,7 +234,7 @@
         flex-direction: column;
     }
 
-    .play-area{
+    .play-area {
         display: flex;
         flex-grow: 1;
     }

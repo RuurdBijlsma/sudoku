@@ -11,7 +11,6 @@
 
 <script>
     import {mapGetters, mapState} from "vuex";
-    import colorString from 'color-string';
 
     export default {
         name: "SudokuVisualize",
@@ -29,14 +28,17 @@
             animationFrame: -1,
             canvas: null,
             context: null,
+            resizeInterval: -1,
         }),
         mounted() {
             this.canvas = this.$refs.canvas;
             this.context = this.canvas.getContext('2d', {alpha: false});
             this.processPuzzle();
             this.render();
+            this.resizeInterval = setInterval(() => this.setCanvasSize(), 1000);
         },
         beforeDestroy() {
+            clearInterval(this.resizeInterval);
             cancelAnimationFrame(this.animationFrame);
         },
         methods: {
@@ -71,11 +73,19 @@
                     }
                 }
 
-                let visualConstraint = this.constraintCells.length !== 0;
+                let visualConstraint = this.constraintCells.length !== 0 || this.editingConstraint;
                 if (this.visualOptions.constrained && !visualConstraint)
                     this.renderBorders(this.box, this.constrainedCells, this.themeColors.sudoku.constrained);
-                else if (visualConstraint)
-                    this.renderBorders(this.box, this.constraintCells, this.themeColors.sudoku.constrained);
+                else if (this.editingConstraint) {
+                    //todo improve speed of this
+                    let cells = this.editingConstraint.variables
+                        .map(v => v.toString().split(',')
+                            .map(n => +n)
+                        )
+                        .map(([x, y]) => this.grid[y][x]);
+                    this.renderBorders(this.box, cells, this.themeColors.sudoku.constraint);
+                } else
+                    this.renderBorders(this.box, this.constraintCells, this.themeColors.sudoku.constraint);
             },
             renderBorders(box, cells, color) {
                 let lineWidth = this.constraintLineWidth;
@@ -84,9 +94,9 @@
                 let cellSize = box.width / this.width;
                 for (let cell of cells) {
                     this.context.strokeRect(
-                        box.x + cell.x * cellSize + this.gridLineWidth / 2,
-                        box.y + cell.y * cellSize + this.gridLineWidth / 2,
-                        cellSize - this.gridLineWidth * 2, cellSize - this.gridLineWidth * 2,
+                        box.x + cell.x * cellSize + this.gridLineWidth*2,
+                        box.y + cell.y * cellSize + this.gridLineWidth*2,
+                        cellSize - this.gridLineWidth * 5, cellSize - this.gridLineWidth * 5,
                     );
                 }
             },
@@ -290,8 +300,11 @@
             puzzle() {
                 this.processPuzzle();
             },
-            '$store.state.miniDrawer'(){
-                this.setCanvasSize();
+            '$store.state.miniDrawer'() {
+                const animationDuration = 300;
+                setTimeout(() => {
+                    this.setCanvasSize();
+                }, animationDuration);
             },
         },
         computed: {
@@ -317,6 +330,7 @@
                 sameCells: state => state.sudoku.sameCells,
                 mode: state => state.sudoku.mode,
                 visualOptions: state => state.sudoku.visualOptions,
+                editingConstraint: state => state.sudoku.editingConstraint,
             }),
             ...mapGetters([
                 'maxDomainLength',

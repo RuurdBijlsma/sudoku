@@ -9,9 +9,12 @@ export default new Vuex.Store({
     state: {
         windowWidth: window.innerWidth,
         miniDrawer: localStorage.getItem('miniDrawer') === null ? false : localStorage.miniDrawer === 'true',
+        snackbars: [],
     },
     mutations: {
         windowWidth: (state, value) => state.windowWidth = value,
+        addSnackObject: (state, snack) => state.snackbars.push(snack),
+        removeSnack: (state, snack) => state.snackbars.splice(state.snackbars.indexOf(snack), 1),
     },
     getters: {
         scale: state => {
@@ -30,6 +33,17 @@ export default new Vuex.Store({
             return `img/user/${i}.png`;
         },
     },
-    actions: {},
+    actions: {
+        addSnack: async ({state, commit}, {text, timeout = 3000}) => {
+            let snack = {text, open: true, timeout};
+            commit('addSnackObject', snack);
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    commit('removeSnack', snack);
+                    resolve();
+                }, timeout + 500);
+            });
+        },
+    },
     modules: {search, sudoku}
 })

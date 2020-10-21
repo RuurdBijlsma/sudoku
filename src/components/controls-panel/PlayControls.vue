@@ -1,10 +1,10 @@
 <template>
     <div class="controls">
-        <custom-expando name="Constraints" :default-show="false">
-            <constraints-list></constraints-list>
-        </custom-expando>
         <custom-expando name="Visuals" :default-show="false">
             <visual-options></visual-options>
+        </custom-expando>
+        <custom-expando name="Constraints" :default-show="false">
+            <constraints-list editable></constraints-list>
         </custom-expando>
         <custom-expando name="Inputs">
             <sudoku-inputs></sudoku-inputs>

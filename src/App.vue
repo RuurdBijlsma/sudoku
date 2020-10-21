@@ -14,6 +14,18 @@
         <v-main>
             <router-view class="router-view"></router-view>
         </v-main>
+
+        <v-snackbar v-for="snack in $store.state.snackbars" app v-model="snack.open" :timeout="snack.timeout"
+                    :outlined="!$vuetify.theme.dark" color="primary">
+            {{ snack.text }}
+            <template v-slot:action="{ attrs }">
+                <v-btn text v-bind="attrs" :color="$vuetify.theme.dark ? 'default' : 'primary'"
+                       @click="snack.open = false">
+                    Dismiss
+                </v-btn>
+            </template>
+        </v-snackbar>
+
         <v-bottom-navigation
                 v-if="$store.getters.scale < 2"
                 color="primary"

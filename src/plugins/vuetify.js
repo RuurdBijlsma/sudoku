@@ -11,10 +11,11 @@ export default new Vuetify({
         dark: localStorage.darkTheme === 'true',
         themes: {
             dark: {
-                primary: '#ff9225',
+                primary: '#ff8325',
                 sudoku: {
                     selection: '#FFFFFF33',
-                    constrained: '#FF000066',
+                    constraint: '#FFAA0077',
+                    constrained: '#FF000077',
                     same: '#00FF0033',
                     relevant: '#00FFFF33',
                 },
@@ -27,7 +28,8 @@ export default new Vuetify({
                 primary: '#f35804',
                 sudoku: {
                     selection: '#00000033',
-                    constrained: '#DD7700FF',
+                    constraint: '#FFAA0077',
+                    constrained: '#FF110077',
                     same: '#00FF0033',
                     relevant: '#00FFFF33',
                 },

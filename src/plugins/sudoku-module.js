@@ -2,6 +2,7 @@ import Vue from 'vue'
 import {Puzzle} from "puzzle-solver";
 import GridCell from "@/js/GridCell";
 import colorString from "color-string";
+import toWords from 'split-camelcase-to-words';
 
 export default {
     state: {
@@ -11,6 +12,7 @@ export default {
         constraintCells: [],
         sameCells: [],
         relevantCells: [],
+        editingConstraint: null,
         selected: {
             domain: false,
             setDomain: false,
@@ -45,6 +47,7 @@ export default {
         ],
     },
     mutations: {
+        editingConstraint: (state, editingConstraint) => state.editingConstraint = editingConstraint,
         dontChange: (state, dontChange) => state.dontChange = dontChange,
         constraintCells: (state, constraintCells) => state.constraintCells = constraintCells,
         box: (state, box) => state.box = box,
@@ -55,6 +58,11 @@ export default {
         relevantCells: (state, relevantCells) => state.relevantCells = relevantCells,
     },
     getters: {
+        constraintTypes: () => Puzzle.constraintTypes,
+        constraintTypeNames: (state, getters) => Object.keys(getters.constraintTypes).reduce((a, b) => {
+            a[b] = toWords(b);
+            return a
+        }, {}),
         common: () => (cells, getCell = c => c) => {
             if (cells.length === 0)
                 return false;
@@ -140,8 +148,9 @@ export default {
                     dispatch('updateCellInfo');
                 }
             }
+            dispatch('handleInput');
         },
-        setCellsValue({getters, dispatch}, {type, value, sudokuElement = null}) {
+        setCellsValue({getters, dispatch}, {type, value}) {
             value = value.toString();
             if (type !== 'color') {
                 let isInDomain = getters.editableCells?.[0]?.user?.[type]?.has(value);
@@ -170,6 +179,33 @@ export default {
         handleInput({dispatch}) {
             dispatch('updateCellInfo');
             dispatch('updateRelevantCells');
+        },
+        updateRelevantConstraints({state, commit, getters}) {
+            if (state.selectedCells.length === 0 || state.selectedCells.length > 21)
+                return commit('constrainedCells', []);
+
+            let hCells = state.selectedCells.map(c => [c.x, c.y].toString());
+            let constraintsOnCell = {};
+            for (let hCell of hCells) {
+                [...new Set(
+                    state.puzzle.usableConstraints
+                        .filter(c => c.variables.find(c => c.toString() === hCell))
+                        .flatMap(c => c.variables)
+                        .map(c => c.toString())
+                        .filter(c => hCell !== c)
+                )].forEach(c => {
+                    if (!constraintsOnCell[c])
+                        constraintsOnCell[c] = 0;
+                    constraintsOnCell[c]++;
+                });
+            }
+            let constrainedCells = [];
+            for (let key in constraintsOnCell)
+                if (constraintsOnCell[key] === hCells.length) {
+                    let [x, y] = key.split(',').map(n => +n);
+                    constrainedCells.push(getters.grid[y][x]);
+                }
+            commit('constrainedCells', constrainedCells);
         },
         updateRelevantCells({state, commit, getters}) {
             let commonDomain = getters.common(state.selectedCells, c => Array.from(c.user.domain));

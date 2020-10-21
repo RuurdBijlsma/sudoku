@@ -1,50 +1,16 @@
 <template>
     <div class="create">
-        <custom-expando name="Create constraints" :default-show="true">
+        <custom-expando name="Edit constraint" default-show v-if="editingConstraint">
+            <edit-constraint :edit-constraint="editingConstraint"></edit-constraint>
+        </custom-expando>
+
+        <custom-expando name="Create constraints" default-show>
             <v-expansion-panels accordion>
                 <v-expansion-panel v-if="constraint.global || selectionActive"
                                    v-for="(constraint, type) in constraintTypes">
-                    <v-expansion-panel-header>{{type}}</v-expansion-panel-header>
+                    <v-expansion-panel-header>{{constraintTypeNames[type]}}</v-expansion-panel-header>
                     <v-expansion-panel-content>
-                        <v-form ref="form" @submit.prevent="addConstraint(type, constraint)">
-                            <v-subheader>Optional</v-subheader>
-                            <v-text-field
-                                    class="mb-4"
-                                    dense
-                                    v-model="constraint.nameInput"
-                                    outlined
-                                    hide-details="auto"
-                                    label="Name"></v-text-field>
-                            <v-text-field
-                                    class="mb-4"
-                                    dense
-                                    v-model="constraint.groupInput"
-                                    placeholder="ex. Sudoku/Blocks"
-                                    outlined
-                                    hide-details="auto"
-                                    label="Group"></v-text-field>
-                            <v-subheader v-if="constraint.value || constraint.constraintFunction">Required</v-subheader>
-                            <v-text-field
-                                    class="mb-4"
-                                    dense
-                                    v-model="constraint.valueInput"
-                                    outlined
-                                    v-if="constraint.value"
-                                    hide-details="auto"
-                                    label="Value"></v-text-field>
-                            <v-textarea dense
-                                        class="mb-2"
-                                        v-model="constraint.constraintInput"
-                                        outlined
-                                        v-if="constraint.constraintFunction"
-                                        label="Constraint Function"
-                                        hide-details="auto"
-                                        placeholder="v => (a, b) => a > b && a > v"></v-textarea>
-                            <v-btn class="add-button" type="submit" small text>
-                                <v-icon color="primary">mdi-plus</v-icon>
-                                Add constraint
-                            </v-btn>
-                        </v-form>
+                        <edit-constraint :set-type="type"></edit-constraint>
                     </v-expansion-panel-content>
                 </v-expansion-panel>
             </v-expansion-panels>
@@ -54,61 +20,31 @@
 
 <script>
     import CustomExpando from "@/components/CustomExpando";
-    import {Puzzle, PuzzleConstraint} from "puzzle-solver";
-    import {mapState} from "vuex";
+    import {PuzzleConstraint} from "puzzle-solver";
+    import {mapGetters, mapState} from "vuex";
+    import EditConstraint from "@/components/EditConstraint";
 
     export default {
         name: "CreateControls",
-        components: {CustomExpando},
-        data: () => ({
-            constraintTypes: Puzzle.constraintTypes,
-        }),
+        components: {EditConstraint, CustomExpando},
+        data: () => ({}),
         mounted() {
-            console.log(Puzzle.constraintTypes);
+            console.log(this.constraintTypes);
         },
         methods: {
-            addConstraint(type, constraint) {
-                if (constraint.value && !constraint.valueInput) {
-                    alert("You must input a value");
-                    return;
-                }
-                if (constraint.constraintFunction) {
-                    if (!constraint.constraintInput) {
-                        alert("You must input a constraint function");
-                        return;
-                    }
-                    if (!constraint.constraintInput.startsWith('v => ')) {
-                        alert("Constraint function must start with 'v => '");
-                        return;
-                    }
-                }
-                if (constraint.groupInput && constraint.groupInput.split('/').length > 2) {
-                    alert("Group's can't be more than 2 deep");
-                    return;
-                }
-                let name = constraint.nameInput ?? type;
-                let options = {name, type};
-                if (constraint.value === Number)
-                    options.value = +constraint.valueInput;
-                else if (constraint.value)
-                    options.value = constraint.valueInput;
-                if (constraint.constraintFunction)
-                    options.constraint = constraint.constraintInput;
-                if (!constraint.global)
-                    options.variables = this.selectedCells.map(c => [c.x, c.y].toString());
-                if (constraint.groupInput)
-                    options.group = constraint.groupInput;
-
-                let puzzleConstraint = new PuzzleConstraint(options);
-                console.log(puzzleConstraint);
+            createPuzzleConstraint(type) {
+                return new PuzzleConstraint({type});
             },
         },
         computed: {
             selectionActive() {
                 return this.selectedCells.length > 0;
             },
+            ...mapGetters(['constraintTypes', 'constraintTypeNames']),
             ...mapState({
                 selectedCells: state => state.sudoku.selectedCells,
+                puzzle: state => state.sudoku.puzzle,
+                editingConstraint: state => state.sudoku.editingConstraint,
             }),
         },
     }
@@ -116,8 +52,8 @@
 
 <style scoped>
     .create {
-        min-width: 230px;
-        width: 230px;
+        min-width: 300px;
+        width: 300px;
         display: flex;
         flex-direction: column;
     }
