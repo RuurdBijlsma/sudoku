@@ -1,120 +1,36 @@
 <template>
     <div class="sudoku" v-if="puzzle !== null"
          ref="sudoku"
-         tabindex="1"
-         @keydown="keyPress">
-        <!--        <div class="create panel">-->
-        <!--            <h2>Create</h2>-->
-        <!--        </div>-->
-        <!--        <draggable-divider></draggable-divider>-->
-        <div class="sudoku-panel">
-            <sudoku-board
-                    @click.native="clickCanvas"
-                    @mousedown.native="mouseDown"
-                    ref="sudokuBoard"
-                    :cursor="cursor"
-                    :puzzle="puzzle"></sudoku-board>
-            <div class="possible-values" v-if="highlighted.setDomain">
-                <h4>Possible values</h4>
-                <v-chip-group>
-                    <v-chip small v-for="v in highlighted.setDomain">{{v}}</v-chip>
-                </v-chip-group>
-            </div>
-        </div>
-        <draggable-divider></draggable-divider>
-        <div class="controls panel">
-            <div class="visuals">
-                <div class="visuals-title">
-                    <h4>Visuals</h4>
-                    <v-btn icon
-                           @click="showVisualOptions = !showVisualOptions">
-                        <v-icon>{{ showVisualOptions ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
-                    </v-btn>
+         v-click-outside="deselectAll">
+        <create-controls class="panel"></create-controls>
+
+        <div tabindex="1" @keydown="keyPress" class="play-area">
+            <div class="sudoku-panel panel">
+                <sudoku-visualize
+                        @mousedown.native="mouseDown"
+                        ref="sudokuVisualize"
+                        :cursor="cursor"
+                        :puzzle="puzzle"></sudoku-visualize>
+                <div class="possible-values" v-if="selected.setDomain">
+                    <h4>Possible values</h4>
+                    <v-chip-group>
+                        <v-chip small v-for="v in selected.setDomain">{{v}}</v-chip>
+                    </v-chip-group>
                 </div>
-                <v-divider></v-divider>
-                <v-expand-transition>
-                    <div v-show="showVisualOptions">
-                        <v-switch label="Same" v-model="visualOptions.same"></v-switch>
-                        <v-switch label="Relevant" v-model="visualOptions.relevant"></v-switch>
-                        <v-switch label="Constraints" v-model="visualOptions.constrained"></v-switch>
-                    </div>
-                </v-expand-transition>
             </div>
-            <div class="inputs">
-                <div class="visuals-title">
-                    <h4>Inputs</h4>
-                    <v-btn icon
-                           @click="showInputsOptions = !showInputsOptions">
-                        <v-icon>{{ showVisualOptions ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
-                    </v-btn>
-                </div>
-                <v-divider></v-divider>
-                <v-expand-transition>
-                    <div v-show="showInputsOptions">
-                        <v-chip-group class="mb-3" color="primary" v-model="$store.state.sudoku.mode" mandatory>
-                            <v-chip value="domain">Domain</v-chip>
-                            <v-chip value="pencilMarks">Pencil</v-chip>
-                            <v-chip value="color">Colour</v-chip>
-                        </v-chip-group>
-                        <div class="control-grid numbers" v-if="mode !== 'color'">
-                            <v-btn
-                                    @click="setCellsValue(mode, i)"
-                                    :color="highlighted[mode] && highlighted[mode].includes(i.toString()) ? 'secondary' : 'default'"
-                                    class="number-button"
-                                    large fab
-                                    v-for="i in 9" :key="i">{{i}}
-                            </v-btn>
-                        </div>
-                        <div class="colors" v-else>
-                            <v-color-picker
-                                    @click.native="applyColor"
-                                    v-model="highlighted.color"
-                                    width="230"
-                                    dot-size="15"
-                                    show-swatches
-                                    mode="rgba"
-                                    :swatches="colorOptions"
-                                    swatches-max-height="150"
-                                    hide-inputs
-                            ></v-color-picker>
-                        </div>
-                        <v-btn class="clear-button" @click="clearCells">
-                            Clear {{mode}}
-                        </v-btn>
-                        <div class="control-buttons">
-                            <v-btn>
-                                <v-icon>mdi-undo</v-icon>
-                                Undo
-                            </v-btn>
-                            <v-btn>
-                                <v-icon>mdi-redo</v-icon>
-                                Redo
-                            </v-btn>
-                            <v-btn>
-                                <v-icon color="error">mdi-restart</v-icon>
-                                Restart
-                            </v-btn>
-                            <v-btn>
-                                <v-icon color="success">mdi-check</v-icon>
-                                Check
-                            </v-btn>
-                        </div>
-                    </div>
-                </v-expand-transition>
-            </div>
+
+            <play-controls class="panel"></play-controls>
         </div>
     </div>
 </template>
 
 <script>
-    import colorString from 'color-string';
-    import SudokuBoard from "@/components/SudokuBoard";
-    import DraggableDivider from "@/components/DraggableDivider";
-    import {mapGetters, mapState} from "vuex";
-    import GridCell from "@/js/GridCell";
+    import {mapActions, mapGetters, mapState} from "vuex";
+    import PlayControls from "@/components/controls-panel/PlayControls";
+    import SudokuVisualize from "@/components/SudokuVisualize";
+    import CreateControls from "@/components/create-panel/CreateControls";
 
     // TODO
-    // show domain of highlighted cell to the right (change common thing back to vuex module thing)
     // Create puzzle stuff,
     // show list of constraints,
     // add constraint to selected cells or global constraint
@@ -126,39 +42,25 @@
     //move solver to worker
     //show rules on current sudoku when playing
     //add editable prop to sudoku.vue to show Create panel and stuff
+    //add mobile support
+    //check if parameter count of custom function matches selected variable count
+    //allow edit? and remove constraints
+    //change constraint default name to programmatically determine that also in list show that name
 
     export default {
         name: "Sudoku",
-        components: {DraggableDivider, SudokuBoard},
+        components: {
+            CreateControls,
+            SudokuVisualize,
+            PlayControls
+        },
         props: {},
         data: () => ({
-            colorOptions: [
-                [
-                    '#000000',
-                    '#686868',
-                    '#ffffff',
-                ],
-                [
-                    '#ff0000',
-                    '#ff7700',
-                    '#ffe900',
-                ],
-                [
-                    '#00ff04',
-                    '#dd2fff',
-                    '#00b7ff',
-                ],
-            ],
-            isMouseDown: false,
+            sudokuMouseDown: false,
             cursor: 'default',
-            highlighted: {
-                domain: false,
-                setDomain: false,
-                pencilMarks: false,
-                color: '#ff0000ff',
-            },
             showVisualOptions: (localStorage.getItem('showVisualOptions') ?? 'false') === 'true',
             showInputsOptions: (localStorage.getItem('showInputsOptions') ?? 'true') === 'true',
+            showRulesOptions: (localStorage.getItem('showRulesOptions') ?? 'false') === 'true',
         }),
         mounted() {
             document.addEventListener('mousemove', this.mouseMove, false);
@@ -169,63 +71,11 @@
             document.removeEventListener('mouseup', this.mouseUp);
         },
         methods: {
-            handleInput() {
-                this.updateCellInfo();
-                this.updateRelevantCells();
-            },
-            updateRelevantCells() {
-                let commonDomain = this.$store.getters.common(this.highlightedCells, c => Array.from(c.user.domain));
-                if (commonDomain.length === 0) {
-                    commonDomain = this.$store.getters.common(this.highlightedCells, c => c.domain);
-                    if (commonDomain.length === this.maxDomainLength) {
-                        this.$store.commit('sameCells', []);
-                        this.$store.commit('relevantCells', []);
-                        return;
-                    }
-                }
-
-                let domainString = commonDomain.toString();
-                let sameCells = this.flatGrid.filter(cell => {
-                    if (this.highlightedCells.includes(cell))
-                        return false;
-                    let userDomain = [...cell.user.domain];
-                    if (userDomain.length === 0) {
-                        return domainString === cell.domain.toString();
-                    }
-                    return domainString === userDomain.toString();
-                });
-
-                let relevantCells = commonDomain.length === 1 ?
-                    this.flatGrid.filter(cell => {
-                        if (this.highlightedCells.includes(cell))
-                            return false;
-                        let value = commonDomain[0].toString();
-                        if (cell.user.domain.has(value))
-                            return true;
-                        let pencilMarks = cell.hasUserPencilMarks ? [...cell.user.pencilMarks] : cell.pencilMarks.map(p => p.toString());
-                        if (!cell.hasValue && pencilMarks.includes(value))
-                            return true
-                        if (!cell.hasValue && cell.domain.length < this.maxDomainLength)
-                            return cell.domain.map(p => p.toString()).includes(value);
-                        return false;
-                    }) : [];
-                relevantCells = relevantCells.filter(c => !sameCells.includes(c))
-
-                this.$store.commit('sameCells', sameCells);
-                this.$store.commit('relevantCells', relevantCells);
-            },
-            updateCellInfo() {
-                this.highlighted.domain = this.$store.getters.common(this.editableCells, c => Array.from(c.user.domain));
-                this.highlighted.setDomain = this.$store.getters.common(this.highlightedCells, c => c.domain);
-                this.highlighted.pencilMarks = this.$store.getters.common(this.editableCells, c => Array.from(c.user.pencilMarks));
-                let color = this.$store.getters.common(this.editableCells, c => c.user.color ?? 'null');
-                this.setHighlightedColor(color);
-            },
             updateRelevantConstraints() {
-                if (this.highlightedCells.length === 0)
+                if (this.selectedCells.length === 0)
                     return this.$store.commit('constrainedCells', []);
 
-                let hCells = this.highlightedCells.map(c => [c.x, c.y].toString());
+                let hCells = this.selectedCells.map(c => [c.x, c.y].toString());
                 let constraintsOnCell = {};
                 for (let hCell of hCells) {
                     [...new Set(
@@ -248,47 +98,33 @@
                     }
                 this.$store.commit('constrainedCells', constrainedCells);
             },
-            setHighlightedColor(color) {
-                if (color === false)
-                    return;
-                if (color === null || color === 'null')
-                    color = 'transparent';
-                let [r, g, b, a] = colorString.get.rgb(color);
-                a = Math.max(a * 3, 1);
-                this.highlighted.color = colorString.to.hex([r, g, b, a]);
-            },
-            applyColor() {
-                let [r, g, b, a] = colorString.get.rgb(this.highlighted.color);
-                a = a / 3;
-                this.highlightedCells.forEach(c => c.user.color = colorString.to.hex([r, g, b, a]));
-            },
-            highlight(cell) {
-                if (!this.highlightedCells.includes(cell)) {
-                    this.highlightedCells.push(cell);
+            select(cell) {
+                if (!this.selectedCells.includes(cell)) {
+                    this.selectedCells.push(cell);
                 }
             },
-            unhighlight(cell) {
-                let index = this.highlightedCells.indexOf(cell);
+            deselect(cell) {
+                let index = this.selectedCells.indexOf(cell);
                 if (index !== -1) {
-                    this.highlightedCells.splice(index, 1);
+                    this.selectedCells.splice(index, 1);
                 }
             },
-            unhighlightAll() {
-                this.highlightedCells.splice(0, this.highlightedCells.length);
+            deselectAll() {
+                this.selectedCells.splice(0, this.selectedCells.length);
             },
             mouseDown(e) {
-                this.isMouseDown = true;
+                this.sudokuMouseDown = true;
                 if (!e.shiftKey && !e.ctrlKey)
-                    this.unhighlightAll();
+                    this.deselectAll();
 
                 let [, , puzzleX, puzzleY] = this.eventToPos(e);
-                let cellSize = this.box.width / this.sudokuBoard.width;
+                let cellSize = this.box.width / this.sudokuVisualize.width;
                 let [cellX, cellY] = [Math.floor(puzzleX / cellSize), Math.floor(puzzleY / cellSize)];
                 if (this.grid[cellY] && this.grid[cellY][cellX]) {
                     if (!e.ctrlKey)
-                        this.highlight(this.grid[cellY][cellX]);
+                        this.select(this.grid[cellY][cellX]);
                     else
-                        this.unhighlight(this.grid[cellY][cellX]);
+                        this.deselect(this.grid[cellY][cellX]);
                 }
             },
             mouseMove(e) {
@@ -298,11 +134,11 @@
                 } else {
                     this.cursor = 'default';
                 }
-                if (this.isMouseDown)
+                if (this.sudokuMouseDown)
                     this.dragCanvas(e);
             },
             mouseUp() {
-                this.isMouseDown = false;
+                this.sudokuMouseDown = false;
             },
             eventToPos(e) {
                 if (!this.boardElement)
@@ -316,19 +152,17 @@
             },
             dragCanvas(e) {
                 let [, , puzzleX, puzzleY] = this.eventToPos(e);
-                let cellSize = this.box.width / this.sudokuBoard.width;
+                let cellSize = this.box.width / this.sudokuVisualize.width;
                 let [cellX, cellY] = [puzzleX / cellSize, puzzleY / cellSize];
                 let [offX, offY] = [cellX % 1, cellY % 1];
                 [cellX, cellY] = [Math.floor(cellX), Math.floor(cellY)];
                 if (this.grid[cellY] && this.grid[cellY][cellX]) {
                     let dist = Math.sqrt((offX - 0.5) ** 2 + (offY - 0.5) ** 2);
                     if (dist <= 0.5 && !e.ctrlKey)  // Within radius 0.5 of center of cell
-                        this.highlight(this.grid[cellY][cellX]);
+                        this.select(this.grid[cellY][cellX]);
                     else if (dist <= 0.5)
-                        this.unhighlight(this.grid[cellY][cellX]);
+                        this.deselect(this.grid[cellY][cellX]);
                 }
-            },
-            clickCanvas(e) {
             },
             keyPress(e) {
                 this.processKey(e.key);
@@ -338,51 +172,13 @@
                     this.clearCells();
                 }
                 if (key.length === 1 && (this.mode === 'domain' || this.mode === 'pencilMarks')) {
-                    this.setCellsValue(this.mode, key);
+                    this.setCellsValue({type: this.mode, value: key});
                 }
             },
-            clearCells() {
-                if (this.mode === 'color')
-                    this.highlightedCells.forEach(c => c.user.color = null);
-
-                for (let cell of this.editableCells) {
-                    if (this.mode !== 'color') {
-                        cell.user[this.mode].clear();
-                        this.updateCellInfo();
-                    }
-                }
-            },
-            setCellsValue(valueType, v) {
-                v = v.toString();
-                if (valueType !== 'color') {
-                    let isInDomain = this.editableCells?.[0]?.user?.[valueType]?.has(v);
-
-                    let change = false;
-                    for (let cell of this.editableCells) {
-                        let collection = cell.user[valueType];
-                        if (isInDomain) {
-                            collection.delete(v);
-                            change = true;
-                        } else {
-                            let maxSize = valueType === 'domain' ?
-                                GridCell.maxDomainSize :
-                                GridCell.maxPencilMarksSize;
-                            if (collection.size < maxSize) {
-                                collection.add(v);
-                                change = true;
-                            }
-                        }
-                    }
-                    if (change) {
-                        this.handleInput();
-                    }
-
-                    this.$refs.sudoku.focus();
-                }
-            },
+            ...mapActions(['setCellsValue', 'updateCellInfo', 'updateRelevantCells', 'clearCells']),
         },
         watch: {
-            highlightedCells() {
+            selectedCells() {
                 this.updateRelevantConstraints();
                 this.updateRelevantCells();
                 this.updateCellInfo();
@@ -399,6 +195,9 @@
             showInputsOptions() {
                 localStorage.showInputsOptions = this.showInputsOptions;
             },
+            showRulesOptions() {
+                localStorage.showRulesOptions = this.showRulesOptions;
+            },
             puzzle() {
                 // let result = this.puzzle.solve();
                 // console.log(result);
@@ -412,17 +211,18 @@
             },
         },
         computed: {
-            sudokuBoard() {
-                return this.$refs.sudokuBoard;
+            sudokuVisualize() {
+                return this.$refs.sudokuVisualize;
             },
             boardElement() {
-                return this.sudokuBoard.$el;
+                return this.sudokuVisualize.$el;
             },
             ...mapGetters(['editableCells', 'grid', 'flatGrid', 'maxDomainLength']),
             ...mapState({
+                selected: state => state.sudoku.selected,
                 puzzle: state => state.sudoku.puzzle,
                 mode: state => state.sudoku.mode,
-                highlightedCells: state => state.sudoku.highlightedCells,
+                selectedCells: state => state.sudoku.selectedCells,
                 box: state => state.sudoku.box,
                 visualOptions: state => state.sudoku.visualOptions,
             })
@@ -434,19 +234,16 @@
     .sudoku {
         display: flex;
         height: 100%;
-    }
-
-    .sudoku:focus {
-        outline: none;
+        width: 100%;
     }
 
     .panel {
         display: inline-flex;
-        min-width: 150px;
-        height: 300px;
+        margin-right: 1em;
     }
 
-    .create {
+    .panel:last-child {
+        margin-right: 0;
     }
 
     .sudoku-panel {
@@ -463,66 +260,12 @@
         flex-direction: column;
     }
 
-    .controls {
+    .play-area{
         display: flex;
-        flex-direction: column;
-        width: 230px;
+        flex-grow: 1;
     }
 
-    .visuals {
-        margin-bottom: 10px;
-    }
-
-    .visuals-title {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .control-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        grid-template-rows: 1fr 1fr 1fr;
-        gap: 15px 5px;
-        grid-template-areas:
-            ". . ."
-            ". . ."
-            ". . .";
-        justify-items: center;
-    }
-
-    .colors {
-        gap: 5px 5px;
-    }
-
-    .colors >>> .v-color-picker__alpha {
-        display: none;
-    }
-
-    .colors >>> .v-color-picker__hue {
-        margin-bottom: 0 !important;
-    }
-
-    .number-button {
-        font-size: 20px !important
-    }
-
-    .clear-button {
-        margin: 10px 0;
-    }
-
-    .control-buttons {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr 1fr;
-        gap: 10px 5px;
-        grid-template-areas:
-            ". ."
-            ". .";
-        justify-items: center;
-    }
-
-    .control-buttons > * {
-        width: 100%;
+    .play-area:focus {
+        outline: none;
     }
 </style>

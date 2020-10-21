@@ -1,8 +1,13 @@
 <template>
     <perfect-scrollbar class="nav-bar">
         <div class="nav-top">
-            <logo></logo>
-            <search-input class="search-input"></search-input>
+            <div class="top-bar">
+                <logo class="logo" v-if="!$store.state.miniDrawer"></logo>
+                <v-btn icon @click="$store.state.miniDrawer = !$store.state.miniDrawer" class="ma-2">
+                    <v-icon>{{$store.state.miniDrawer ? 'mdi-chevron-right' : 'mdi-chevron-left'}}</v-icon>
+                </v-btn>
+            </div>
+            <search-input v-if="!$store.state.miniDrawer" class="search-input"></search-input>
         </div>
 
         <v-list dense nav class="py-0">
@@ -12,16 +17,6 @@
                 </v-list-item-icon>
                 <v-list-item-content>
                     <v-list-item-title>{{link.name}}</v-list-item-title>
-                </v-list-item-content>
-            </v-list-item>
-
-            <v-subheader>Library</v-subheader>
-            <v-list-item to="/library/artists">
-                <v-list-item-icon>
-                    <v-icon color="primary">mdi-microphone-variant</v-icon>
-                </v-list-item-icon>
-                <v-list-item-content>
-                    <v-list-item-title>Artists</v-list-item-title>
                 </v-list-item-content>
             </v-list-item>
         </v-list>
@@ -45,7 +40,11 @@
         mounted() {
         },
         methods: {},
-        watch: {},
+        watch: {
+            '$store.state.miniDrawer'() {
+                localStorage.miniDrawer = this.$store.state.miniDrawer;
+            },
+        },
     }
 </script>
 
@@ -53,6 +52,15 @@
     .nav-bar {
         height: 100%;
         width: 100%;
+    }
+
+    .top-bar {
+        display: flex;
+        align-items: center;
+    }
+
+    .logo {
+        flex-grow: 1;
     }
 
     .search-input {

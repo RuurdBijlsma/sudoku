@@ -5,12 +5,14 @@
                 v-if="$store.getters.scale >= 2"
                 v-model="drawer"
                 :permanent="true"
+                :mini-variant="$store.state.miniDrawer"
                 app
                 absolute>
-            <nav-content :navigation="navigation"></nav-content>
+            <nav-content :mini-variant="$store.state.miniDrawer"
+                         :navigation="navigation"></nav-content>
         </v-navigation-drawer>
         <v-main>
-            <router-view></router-view>
+            <router-view class="router-view"></router-view>
         </v-main>
         <v-bottom-navigation
                 v-if="$store.getters.scale < 2"
@@ -35,6 +37,7 @@
         components: {ToolBar, NavContent},
         data: () => ({
             drawer: true,
+            miniDrawer: false,
         }),
         mounted() {
             console.log(this.$store);
@@ -68,8 +71,19 @@
     @import url('//fonts.googleapis.com/css?family=Roboto:400,400i,500,600,700,800,900&display=swap');
     @import url('//cdn.materialdesignicons.com/5.0.45/css/materialdesignicons.min.css');
 
+    html, body {
+        overflow-y: auto;
+    }
+
     .app {
         user-select: none;
         font-family: Roboto, Helvetica Neue, Helvetica, Arial, sans-serif;
+    }
+
+    .router-view {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        overflow-y: auto;
     }
 </style>

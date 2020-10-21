@@ -3,14 +3,11 @@
         <logo :hide-name="true" class="logo" v-if="$store.getters.scale < 2"></logo>
         <v-toolbar-title>{{$route.name}}</v-toolbar-title>
         <v-spacer></v-spacer>
-
         <v-menu offset-y>
             <template v-slot:activator="{ on, attrs }">
-                <v-avatar size="40"
-                          v-bind="attrs"
-                          v-on="on">
-                    <v-img :src="$store.getters.notFoundUser"></v-img>
-                </v-avatar>
+                <v-btn color="primary" class="mr-1" icon v-bind="attrs" v-on="on">
+                    <v-icon>mdi-face</v-icon>
+                </v-btn>
             </template>
             <v-list>
                 <v-list-item>

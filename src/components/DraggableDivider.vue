@@ -1,12 +1,16 @@
 <template>
-    <div class="divider">
+    <div class="divider" ref="dragRegion">
         <div class="stripe"></div>
     </div>
 </template>
 
 <script>
     export default {
-        name: "DraggableDivider"
+        name: "DraggableDivider",
+        data: () => ({
+        }),
+        methods: {
+        }
     }
 </script>
 

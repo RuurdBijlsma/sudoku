@@ -28,8 +28,8 @@
             // puzzle.domains[[7, 4]] = [4, 5, 6];
             puzzle.pencilMarks[[3, 3]] = [1, 2, 3, 7, 8];
             puzzle.domains[[3, 3]] = [1, 2, 3, 4];
-            let knight = new PuzzleConstraint('Knights move', 'knightsMove');
-            let king = new PuzzleConstraint('Kings move', 'kingsMove');
+            let knight = new PuzzleConstraint({name: 'Knights move', type: 'knightsMove'});
+            let king = new PuzzleConstraint({name: 'Kings move', type: 'kingsMove'});
             puzzle.addConstraint(king)
             puzzle.addConstraint(knight)
             console.log(Puzzle, puzzle, knight)

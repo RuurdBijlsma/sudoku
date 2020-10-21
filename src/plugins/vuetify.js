@@ -13,7 +13,7 @@ export default new Vuetify({
             dark: {
                 primary: '#ff9225',
                 sudoku: {
-                    highlight: '#FFFFFF33',
+                    selection: '#FFFFFF33',
                     constrained: '#FF000066',
                     same: '#00FF0033',
                     relevant: '#00FFFF33',
@@ -26,7 +26,7 @@ export default new Vuetify({
             light: {
                 primary: '#f35804',
                 sudoku: {
-                    highlight: '#00000033',
+                    selection: '#00000033',
                     constrained: '#DD7700FF',
                     same: '#00FF0033',
                     relevant: '#00FFFF33',

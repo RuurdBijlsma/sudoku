@@ -14,7 +14,7 @@
     import colorString from 'color-string';
 
     export default {
-        name: "SudokuBoard",
+        name: "SudokuVisualize",
         props: {
             padding: {
                 type: Object,
@@ -49,12 +49,12 @@
                 if (this.puzzle === null || this.width === 0 || this.height === 0)
                     return;
 
+
                 if (this.visualOptions.relevant)
                     this.renderSpecialCells(this.box, this.relevantCells, this.themeColors.sudoku.relevant);
                 if (this.visualOptions.same)
                     this.renderSpecialCells(this.box, this.sameCells, this.themeColors.sudoku.same);
-
-                this.renderSpecialCells(this.box, this.highlightedCells, this.themeColors.sudoku.highlight);
+                this.renderSpecialCells(this.box, this.selectedCells, this.themeColors.sudoku.selection);
                 this.renderCells(this.box);
 
                 for (let layer of this.puzzle.backgroundLayers) {
@@ -70,19 +70,23 @@
                             break;
                     }
                 }
-                if (this.visualOptions.constrained)
-                    this.renderConstrained(this.box);
+
+                let visualConstraint = this.constraintCells.length !== 0;
+                if (this.visualOptions.constrained && !visualConstraint)
+                    this.renderBorders(this.box, this.constrainedCells, this.themeColors.sudoku.constrained);
+                else if (visualConstraint)
+                    this.renderBorders(this.box, this.constraintCells, this.themeColors.sudoku.constrained);
             },
-            renderConstrained(box) {
-                let lineWidth = 5;
-                this.context.strokeStyle = this.themeColors.sudoku.constrained;
+            renderBorders(box, cells, color) {
+                let lineWidth = this.constraintLineWidth;
+                this.context.strokeStyle = color;
                 this.context.lineWidth = lineWidth;
                 let cellSize = box.width / this.width;
-                for (let cell of this.constrainedCells) {
+                for (let cell of cells) {
                     this.context.strokeRect(
-                        box.x + cell.x * cellSize + 1,
-                        box.y + cell.y * cellSize + 1,
-                        cellSize - 3, cellSize - 3,
+                        box.x + cell.x * cellSize + this.gridLineWidth / 2,
+                        box.y + cell.y * cellSize + this.gridLineWidth / 2,
+                        cellSize - this.gridLineWidth * 2, cellSize - this.gridLineWidth * 2,
                     );
                 }
             },
@@ -196,7 +200,7 @@
                 }
             },
             renderGrid(box) {
-                let lineWidth = box.width / 400;
+                let lineWidth = this.gridLineWidth;
                 let cellSize = box.width / this.width;
 
                 this.context.beginPath();
@@ -215,7 +219,7 @@
             renderBoxes(box) {
                 if (!this.hasBoxes)
                     return false;
-                let lineWidth = box.width / 150;
+                let lineWidth = this.boxLineWidth;
                 let cellSize = box.width / this.width;
                 let verticalLines = this.width / this.blockSize - 1;
                 let horizontalLines = this.height / this.blockSize - 1;
@@ -286,16 +290,29 @@
             puzzle() {
                 this.processPuzzle();
             },
+            '$store.state.miniDrawer'(){
+                this.setCanvasSize();
+            },
         },
         computed: {
+            gridLineWidth() {
+                return this.box.width / 400;
+            },
+            constraintLineWidth() {
+                return this.box.width / 100;
+            },
+            boxLineWidth() {
+                return this.box.width / 150;
+            },
             themeColors() {
                 return this.$vuetify.theme.themes[this.$vuetify.theme.isDark ? 'dark' : 'light'];
             },
             ...mapState({
                 box: state => state.sudoku.box,
                 puzzle: state => state.sudoku.puzzle,
-                highlightedCells: state => state.sudoku.highlightedCells,
+                selectedCells: state => state.sudoku.selectedCells,
                 constrainedCells: state => state.sudoku.constrainedCells,
+                constraintCells: state => state.sudoku.constraintCells,
                 relevantCells: state => state.sudoku.relevantCells,
                 sameCells: state => state.sudoku.sameCells,
                 mode: state => state.sudoku.mode,

@@ -8,6 +8,7 @@ Vue.use(Vuex)
 export default new Vuex.Store({
     state: {
         windowWidth: window.innerWidth,
+        miniDrawer: localStorage.getItem('miniDrawer') === null ? false : localStorage.miniDrawer === 'true',
     },
     mutations: {
         windowWidth: (state, value) => state.windowWidth = value,

@@ -1,14 +1,23 @@
 import Vue from 'vue'
 import {Puzzle} from "puzzle-solver";
 import GridCell from "@/js/GridCell";
+import colorString from "color-string";
 
 export default {
     state: {
         puzzle: new Puzzle(),
-        highlightedCells: [],
+        selectedCells: [],
         constrainedCells: [],
+        constraintCells: [],
         sameCells: [],
         relevantCells: [],
+        selected: {
+            domain: false,
+            setDomain: false,
+            pencilMarks: false,
+            color: '#ff0000ff',
+        },
+        dontChange: false,
         visualOptions: {
             constrained: false,
             same: true,
@@ -17,8 +26,27 @@ export default {
         },
         mode: 'domain',
         box: {x: 0, y: 0, width: 0, height: 0},
+        colorOptions: [
+            [
+                '#000000',
+                '#686868',
+                '#ffffff',
+            ],
+            [
+                '#ff0000',
+                '#ff7700',
+                '#ffe900',
+            ],
+            [
+                '#00ff04',
+                '#dd2fff',
+                '#00b7ff',
+            ],
+        ],
     },
     mutations: {
+        dontChange: (state, dontChange) => state.dontChange = dontChange,
+        constraintCells: (state, constraintCells) => state.constraintCells = constraintCells,
         box: (state, box) => state.box = box,
         puzzle: (state, puzzle) => state.puzzle = puzzle,
         mode: (state, mode) => state.mode = mode,
@@ -47,7 +75,7 @@ export default {
             return domain;
         },
         editableCells(state) {
-            return state.highlightedCells.filter(c => !c.hasSetValue);
+            return state.selectedCells.filter(c => !c.hasSetValue);
         },
         maxDomainLength(state, getters) {
             let max = 0;
@@ -101,5 +129,107 @@ export default {
             return [...Array(height)].map((_, y) => [...Array(width)].map((_, x) => cells[[x, y]]));
         }
     },
-    actions: {}
+    actions: {
+        clearCells({state, getters, dispatch}) {
+            if (state.mode === 'color')
+                state.selectedCells.forEach(c => c.user.color = null);
+
+            for (let cell of getters.editableCells) {
+                if (state.mode !== 'color') {
+                    cell.user[state.mode].clear();
+                    dispatch('updateCellInfo');
+                }
+            }
+        },
+        setCellsValue({getters, dispatch}, {type, value, sudokuElement = null}) {
+            value = value.toString();
+            if (type !== 'color') {
+                let isInDomain = getters.editableCells?.[0]?.user?.[type]?.has(value);
+
+                let change = false;
+                for (let cell of getters.editableCells) {
+                    let collection = cell.user[type];
+                    if (isInDomain) {
+                        collection.delete(value);
+                        change = true;
+                    } else {
+                        let maxSize = type === 'domain' ?
+                            GridCell.maxDomainSize :
+                            GridCell.maxPencilMarksSize;
+                        if (collection.size < maxSize) {
+                            collection.add(value);
+                            change = true;
+                        }
+                    }
+                }
+
+                if (change)
+                    dispatch('handleInput');
+            }
+        },
+        handleInput({dispatch}) {
+            dispatch('updateCellInfo');
+            dispatch('updateRelevantCells');
+        },
+        updateRelevantCells({state, commit, getters}) {
+            let commonDomain = getters.common(state.selectedCells, c => Array.from(c.user.domain));
+            if (commonDomain.length === 0) {
+                commonDomain = getters.common(state.selectedCells, c => c.domain);
+                if (commonDomain.length === getters.maxDomainLength) {
+                    commit('sameCells', []);
+                    commit('relevantCells', []);
+                    return;
+                }
+            }
+
+            let domainString = commonDomain.toString();
+            let sameCells = getters.flatGrid.filter(cell => {
+                if (state.selectedCells.includes(cell))
+                    return false;
+                let userDomain = [...cell.user.domain];
+                if (userDomain.length === 0) {
+                    return domainString === cell.domain.toString();
+                }
+                return domainString === userDomain.toString();
+            });
+
+            let relevantCells = commonDomain.length === 1 ?
+                getters.flatGrid.filter(cell => {
+                    if (state.selectedCells.includes(cell))
+                        return false;
+                    let value = commonDomain[0].toString();
+                    if (cell.user.domain.has(value))
+                        return true;
+                    let pencilMarks = cell.hasUserPencilMarks ? [...cell.user.pencilMarks] : cell.pencilMarks.map(p => p.toString());
+                    if (!cell.hasValue && pencilMarks.includes(value))
+                        return true
+                    if (!cell.hasValue && cell.domain.length < getters.maxDomainLength)
+                        return cell.domain.map(p => p.toString()).includes(value);
+                    return false;
+                }) : [];
+            relevantCells = relevantCells.filter(c => !sameCells.includes(c))
+
+            commit('sameCells', sameCells);
+            commit('relevantCells', relevantCells);
+        },
+        updateCellInfo({state, getters, dispatch}) {
+            state.selected.domain = getters.common(getters.editableCells, c => Array.from(c.user.domain));
+            state.selected.setDomain = getters.common(state.selectedCells, c => c.domain);
+            state.selected.pencilMarks = getters.common(getters.editableCells, c => Array.from(c.user.pencilMarks));
+            let color = getters.common(getters.editableCells, c => c.user.color ?? 'null');
+            dispatch('setSelectedColor', color);
+        },
+        setSelectedColor({state, commit}, color) {
+            if (color === false)
+                return;
+            if (color === null || color === 'null')
+                color = 'transparent';
+            let [r, g, b, a] = colorString.get.rgb(color);
+            a = Math.max(a * 3, 1);
+            let newColor = colorString.to.hex([r, g, b, a]);
+            if (state.selected.color !== newColor)
+                commit('dontChange', true);
+            state.selected.color = newColor;
+        },
+    }
 }
