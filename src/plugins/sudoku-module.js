@@ -1,4 +1,3 @@
-import Vue from 'vue'
 import {Puzzle} from "puzzle-solver";
 import GridCell from "@/js/GridCell";
 import colorString from "color-string";
@@ -9,8 +8,8 @@ export default {
     state: {
         puzzle: new Puzzle(),
         selectedCells: [],
-        constrainedCells: [],
-        constraintCells: [],
+        constrainedFromSelection: [],
+        selectedConstraint: null,
         sameCells: [],
         relevantCells: [],
         editingConstraint: null,
@@ -65,11 +64,11 @@ export default {
         unwatchSolvability: state => state.watchSolvability--,
         editingConstraint: (state, editingConstraint) => state.editingConstraint = editingConstraint,
         dontChange: (state, dontChange) => state.dontChange = dontChange,
-        constraintCells: (state, constraintCells) => state.constraintCells = constraintCells,
+        selectedConstraint: (state, selectedConstraint) => state.selectedConstraint = selectedConstraint,
         box: (state, box) => state.box = box,
         puzzle: (state, puzzle) => state.puzzle = puzzle,
         mode: (state, mode) => state.mode = mode,
-        constrainedCells: (state, constrainedCells) => state.constrainedCells = constrainedCells,
+        constrainedFromSelection: (state, constrainedFromSelection) => state.constrainedFromSelection = constrainedFromSelection,
         sameCells: (state, sameCells) => state.sameCells = sameCells,
         relevantCells: (state, relevantCells) => state.relevantCells = relevantCells,
     },
@@ -264,7 +263,7 @@ export default {
         },
         updateRelevantConstraints({state, commit, getters}) {
             if (state.selectedCells.length === 0 || state.selectedCells.length > 21)
-                return commit('constrainedCells', []);
+                return commit('constrainedFromSelection', []);
 
             let hCells = state.selectedCells.map(c => [c.x, c.y].toString());
             let constraintsOnCell = {};
@@ -281,13 +280,13 @@ export default {
                     constraintsOnCell[c]++;
                 });
             }
-            let constrainedCells = [];
+            let constrained = [];
             for (let key in constraintsOnCell)
                 if (constraintsOnCell[key] === hCells.length) {
                     let [x, y] = key.split(',').map(n => +n);
-                    constrainedCells.push(getters.grid[y][x]);
+                    constrained.push(getters.grid[y][x]);
                 }
-            commit('constrainedCells', constrainedCells);
+            commit('constrainedFromSelection', constrained);
         },
         updateRelevantCells({state, commit, getters}) {
             let commonDomain = getters.common(state.selectedCells, c => Array.from(c.user.domain));

@@ -1,8 +1,8 @@
 <template>
     <div>
         <v-chip-group class="mb-3" color="primary" v-model="$store.state.sudoku.mode" mandatory>
-            <v-chip value="domain">Domain</v-chip>
             <v-chip value="pencilMarks">Pencil</v-chip>
+            <v-chip value="domain">Domain</v-chip>
             <v-chip value="color">Colour</v-chip>
         </v-chip-group>
         <div class="control-grid numbers" v-if="mode !== 'color'">

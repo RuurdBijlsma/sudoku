@@ -11,7 +11,8 @@
                 <v-list-item-title>{{key}}</v-list-item-title>
             </template>
             <div>
-                <constraint-group :editable="editable" sub-group :group="value" v-if="key !== 'constraints'"></constraint-group>
+                <constraint-group :editable="editable" sub-group :group="value"
+                                  v-if="key !== 'constraints'"></constraint-group>
             </div>
         </v-list-group>
         <v-list-item :style="{
@@ -35,7 +36,7 @@
 </template>
 
 <script>
-    import {mapState} from "vuex";
+    import {mapGetters, mapState} from "vuex";
 
     export default {
         name: "ConstraintGroup",
@@ -62,7 +63,7 @@
                 this.$store.dispatch('updateRelevantConstraints');
             },
             stopVisualize() {
-                this.$store.commit('constraintCells', []);
+                this.$store.commit('selectedConstraint', null);
             },
             visualizeConstraint(constraint) {
                 if (constraint.variables) {
@@ -70,7 +71,10 @@
                         .map(k => k.toString().split(',')
                             .map(n => +n))
                         .map(([x, y]) => this.$store.getters.grid[y][x]);
-                    this.$store.commit('constraintCells', cells)
+                    this.$store.commit('selectedConstraint', {
+                        directional: this.constraintTypes[constraint.type]?.directional,
+                        cells
+                    })
                 }
             },
         },
@@ -86,6 +90,7 @@
             ...mapState({
                 editingConstraint: state => state.sudoku.editingConstraint,
             }),
+            ...mapGetters(['constraintTypes'])
         },
     }
 </script>

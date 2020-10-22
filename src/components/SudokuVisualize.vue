@@ -77,19 +77,18 @@
                     }
                 }
 
-                let visualConstraint = this.constraintCells.length !== 0 || this.editingConstraint;
+                let visualConstraint = this.selectedConstraint !== null || this.editingConstraint;
                 if (this.options.constrained && !visualConstraint)
-                    this.renderBorders(this.box, this.constrainedCells, this.themeColors.sudoku.constrained);
+                    this.renderBorders(this.box, this.constrainedFromSelection, this.themeColors.sudoku.constrained, false);
                 else if (this.editingConstraint) {
                     //todo improve speed of this
                     let cells = this.editingConstraint.variables
-                        .map(v => v.toString().split(',')
-                            .map(n => +n)
-                        )
+                        .map(v => v.toString().split(',').map(n => +n))
                         .map(([x, y]) => this.grid[y][x]);
-                    this.renderBorders(this.box, cells, this.themeColors.sudoku.constraint);
-                } else
-                    this.renderBorders(this.box, this.constraintCells, this.themeColors.sudoku.constraint);
+                    this.renderBorders(this.box, cells, this.themeColors.sudoku.constraint,
+                        this.constraintTypes[this.editingConstraint.type].directional ?? false);
+                } else if (this.selectedConstraint)
+                    this.renderBorders(this.box, this.selectedConstraint?.cells, this.themeColors.sudoku.constraint, this.selectedConstraint.directional);
             },
             rotate(cx, cy, x, y, radians) {
                 const cos = Math.cos(radians),
@@ -101,13 +100,13 @@
             drawArrow(x, y, height, width, angle) {
                 this.context.lineCap = 'round';
                 let left = x - width / 2;
-                let points = [[left, y - height / 2], [left, y + height / 2], [x + width, y]]
+                let points = [[left, y - height / 2], [x + width, y], [left, y + height / 2]]
                     .map(p => this.rotate(x, y, ...p, Math.PI / 2 + angle));
                 this.context.beginPath();
-                this.context.moveTo(...points[points.length - 1]);
+                this.context.moveTo(...points[0]);
                 for (let [x, y] of points)
                     this.context.lineTo(x, y);
-                this.context.fill();
+                this.context.stroke();
             },
             renderArrows(box, cells, color) {
                 this.context.fillStyle = color;
@@ -125,12 +124,15 @@
                         cell.x * cellSize + cellSize / 2,
                         cell.y * cellSize + cellSize / 2,
                         cellSize / 3,
-                        cellSize / 6,
+                        cellSize / 8,
                         angle,
                     );
                 }
             },
             renderBorders(box, cells, color, directional) {
+                if (!cells)
+                    return;
+
                 let lineWidth = this.constraintLineWidth;
                 this.context.strokeStyle = color;
                 this.context.lineWidth = lineWidth;
@@ -407,8 +409,8 @@
                 box: state => state.sudoku.box,
                 puzzle: state => state.sudoku.puzzle,
                 selectedCells: state => state.sudoku.selectedCells,
-                constrainedCells: state => state.sudoku.constrainedCells,
-                constraintCells: state => state.sudoku.constraintCells,
+                constrainedFromSelection: state => state.sudoku.constrainedFromSelection,
+                selectedConstraint: state => state.sudoku.selectedConstraint,
                 relevantCells: state => state.sudoku.relevantCells,
                 sameCells: state => state.sudoku.sameCells,
                 mode: state => state.sudoku.mode,
@@ -417,6 +419,7 @@
                 solvability: state => state.sudoku.solvability,
             }),
             ...mapGetters([
+                'constraintTypes',
                 'maxDomainLength',
                 'blockSize',
                 'hasBoxes',
