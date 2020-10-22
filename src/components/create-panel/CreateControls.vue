@@ -1,10 +1,33 @@
 <template>
     <div class="create">
+        <div class="solvability-status" v-if="isSolved || loading">
+            <div v-if="loading" class="loading-text">
+                <v-progress-circular class="mr-2" size="12" width="2" indeterminate></v-progress-circular>
+                <div class="caption">
+                    Solving puzzle...
+                </div>
+            </div>
+            <div v-else class="caption">
+                {{solvable === 'unique' ? 'Unique solution!' :
+                solvable === 'yes' ? 'Solvable, not unique' :
+                'Not solvable!'}}
+                <v-icon class="ml-2" small v-if="solvable !== 'no'"
+                        :color="solvable === 'unique' ? 'success' : 'default'">
+                    mdi-check
+                </v-icon>
+                <v-icon class="ml-2" v-else color="error">mdi-alert-circle-outline</v-icon>
+            </div>
+        </div>
+
+        <custom-expando name="Puzzle" default-show>
+            <v-switch label="Auto solve" v-model="options.autoSolve"></v-switch>
+        </custom-expando>
+
         <custom-expando name="Edit constraint" default-show v-if="editingConstraint">
             <edit-constraint :edit-constraint="editingConstraint"></edit-constraint>
         </custom-expando>
 
-        <custom-expando name="Create constraints" default-show>
+        <custom-expando name="Create constraints">
             <v-expansion-panels accordion>
                 <v-expansion-panel v-if="constraint.global || selectionActive"
                                    v-for="(constraint, type) in constraintTypes">
@@ -21,7 +44,7 @@
 <script>
     import CustomExpando from "@/components/CustomExpando";
     import {PuzzleConstraint} from "puzzle-solver";
-    import {mapGetters, mapState} from "vuex";
+    import {mapActions, mapGetters, mapState} from "vuex";
     import EditConstraint from "@/components/EditConstraint";
 
     export default {
@@ -29,22 +52,46 @@
         components: {EditConstraint, CustomExpando},
         data: () => ({}),
         mounted() {
-            console.log(this.constraintTypes);
+            this.$store.commit('watchSolvability');
+        },
+        beforeDestroy() {
+            this.$store.commit('unwatchSolvability');
         },
         methods: {
-            createPuzzleConstraint(type) {
-                return new PuzzleConstraint({type});
+            ...mapActions(['updateSolvability','stopSolving', 'updateConsistentDomains'])
+        },
+        watch: {
+            'options.autoSolve'(value) {
+                if (value)
+                    this.updateSolvability();
+                else
+                    this.stopSolving();
+            },
+            'options.solution'(value) {
+                if (value)
+                    this.options.consistentDomains = false;
+            },
+            'options.consistentDomains'(value) {
+                if (value){
+                    this.updateConsistentDomains();
+                    this.options.solution = false;
+                }
             },
         },
         computed: {
+            loading() {
+                return this.solvability.solveWorkers.length > 0;
+            },
             selectionActive() {
                 return this.selectedCells.length > 0;
             },
-            ...mapGetters(['constraintTypes', 'constraintTypeNames']),
+            ...mapGetters(['constraintTypes', 'constraintTypeNames', 'grid', 'solvable', 'isSolved']),
             ...mapState({
+                solvability: state => state.sudoku.solvability,
                 selectedCells: state => state.sudoku.selectedCells,
                 puzzle: state => state.sudoku.puzzle,
                 editingConstraint: state => state.sudoku.editingConstraint,
+                options: state => state.sudoku.options,
             }),
         },
     }
@@ -58,7 +105,15 @@
         flex-direction: column;
     }
 
-    .add-button {
-        width: 100%;
+    .solvability-status {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .loading-text {
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 </style>

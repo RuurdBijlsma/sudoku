@@ -32,20 +32,15 @@
 
     // TODO
     // Create puzzle stuff,
-    // add constraint to selected cells or global constraint
-    // allow resize of panels
-    //add keybinds for more stuff
-    //add undo redo
-    //check keep
-    //solve puzzle
-    //move solver to worker
-    //add editable prop to sudoku.vue to show Create panel and stuff
-    //add mobile support
-    //check if parameter count of custom function matches selected variable count
-    //allow edit? and remove constraints
-    //change constraint default name to programmatically determine that also in list show that name
+    // add key binds for more stuff
+    // add undo redo
+    // check keep
+    // add editable prop to sudoku.vue to show Create panel and stuff
+    // add mobile support
+    // check if parameter count of custom function matches selected variable count
     // add visuals for cages/thermometers
-    //show direction of constraint cells
+    // show direction of constraint cells
+    // update solvability and arc consistency when changing constraints in any way (edit/create/delete)
 
     export default {
         name: "Sudoku",
@@ -58,9 +53,6 @@
         data: () => ({
             sudokuMouseDown: false,
             cursor: 'default',
-            showVisualOptions: (localStorage.getItem('showVisualOptions') ?? 'false') === 'true',
-            showInputsOptions: (localStorage.getItem('showInputsOptions') ?? 'true') === 'true',
-            showRulesOptions: (localStorage.getItem('showRulesOptions') ?? 'false') === 'true',
         }),
         mounted() {
             document.addEventListener('mousemove', this.mouseMove, false);
@@ -140,15 +132,51 @@
             keyPress(e) {
                 this.processKey(e.key);
             },
-            processKey(key) {
-                if (key === 'Delete' || key === 'Backspace') {
-                    this.clearCells();
+            moveSelection(x = 0, y = 0) {
+                if (this.selectedCells.length === 0) {
+                    this.selectedCells.push(this.grid[y][x]);
+                    return;
                 }
-                if (key.length === 1 && (this.mode === 'domain' || this.mode === 'pencilMarks')) {
-                    this.setCellsValue({type: this.mode, value: key});
+                let cell = this.selectedCells[0];
+                y += cell.y;
+                x += cell.x;
+                if (this.grid[y]?.[x]) {
+                    this.$store.commit('selectedCells', [this.grid[y][x]]);
                 }
             },
-            ...mapActions(['setCellsValue', 'updateCellInfo', 'updateRelevantCells', 'updateRelevantConstraints', 'clearCells']),
+            processKey(key) {
+                switch (key) {
+                    case 'ArrowLeft':
+                        this.moveSelection(-1, 0);
+                        break;
+                    case 'ArrowRight':
+                        this.moveSelection(1, 0);
+                        break;
+                    case 'ArrowUp':
+                        this.moveSelection(0, -1);
+                        break;
+                    case 'ArrowDown':
+                        this.moveSelection(0, 1);
+                        break;
+                    case 'Backspace':
+                    case 'Delete':
+                        this.clearCells();
+                        break;
+                    default:
+                        if (key.length === 1 && (this.mode === 'domain' || this.mode === 'pencilMarks'))
+                            this.setCellsValue({type: this.mode, value: key});
+                        break;
+                }
+            },
+            ...mapActions([
+                'setCellsValue',
+                'updateCellInfo',
+                'updateRelevantCells',
+                'updateRelevantConstraints',
+                'clearCells',
+                'updateSolvability',
+                'updateConsistentDomains',
+            ]),
         },
         watch: {
             selectedCells() {
@@ -156,10 +184,10 @@
                 this.updateRelevantCells();
                 this.updateCellInfo();
             },
-            visualOptions: {
+            options: {
                 deep: true,
                 handler() {
-                    localStorage.visualOptions = JSON.stringify(this.visualOptions);
+                    localStorage.puzzleOptions = JSON.stringify(this.options);
                 }
             },
             showVisualOptions() {
@@ -172,6 +200,10 @@
                 localStorage.showRulesOptions = this.showRulesOptions;
             },
             puzzle() {
+                if (this.options.autoSolve)
+                    this.updateSolvability();
+                if (this.options.consistentDomains)
+                    this.updateConsistentDomains()
                 // let result = this.puzzle.solve();
                 // console.log(result);
                 // for (let key in result.solutions[0]) {
@@ -197,7 +229,7 @@
                 mode: state => state.sudoku.mode,
                 selectedCells: state => state.sudoku.selectedCells,
                 box: state => state.sudoku.box,
-                visualOptions: state => state.sudoku.visualOptions,
+                options: state => state.sudoku.options,
             })
         },
     }

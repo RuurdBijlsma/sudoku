@@ -27,7 +27,7 @@
             },
             defaultShow: {
                 type: Boolean,
-                default: true,
+                default: false,
             },
         },
         data: () => ({

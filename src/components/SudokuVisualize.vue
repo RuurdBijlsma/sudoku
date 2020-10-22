@@ -52,12 +52,16 @@
                     return;
 
 
-                if (this.visualOptions.relevant)
+                if (this.options.relevant)
                     this.renderSpecialCells(this.box, this.relevantCells, this.themeColors.sudoku.relevant);
-                if (this.visualOptions.same)
+                if (this.options.same)
                     this.renderSpecialCells(this.box, this.sameCells, this.themeColors.sudoku.same);
                 this.renderSpecialCells(this.box, this.selectedCells, this.themeColors.sudoku.selection);
                 this.renderCells(this.box);
+                if (this.options.solution)
+                    this.renderSolution(this.box);
+                else if (this.options.consistentDomains)
+                    this.renderConsistentDomains(this.box);
 
                 for (let layer of this.puzzle.backgroundLayers) {
                     switch (layer) {
@@ -74,7 +78,7 @@
                 }
 
                 let visualConstraint = this.constraintCells.length !== 0 || this.editingConstraint;
-                if (this.visualOptions.constrained && !visualConstraint)
+                if (this.options.constrained && !visualConstraint)
                     this.renderBorders(this.box, this.constrainedCells, this.themeColors.sudoku.constrained);
                 else if (this.editingConstraint) {
                     //todo improve speed of this
@@ -87,18 +91,59 @@
                 } else
                     this.renderBorders(this.box, this.constraintCells, this.themeColors.sudoku.constraint);
             },
-            renderBorders(box, cells, color) {
+            rotate(cx, cy, x, y, radians) {
+                const cos = Math.cos(radians),
+                    sin = Math.sin(radians),
+                    nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+                    ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+                return [nx, ny];
+            },
+            drawArrow(x, y, height, width, angle) {
+                this.context.lineCap = 'round';
+                let left = x - width / 2;
+                let points = [[left, y - height / 2], [left, y + height / 2], [x + width, y]]
+                    .map(p => this.rotate(x, y, ...p, Math.PI / 2 + angle));
+                this.context.beginPath();
+                this.context.moveTo(...points[points.length - 1]);
+                for (let [x, y] of points)
+                    this.context.lineTo(x, y);
+                this.context.fill();
+            },
+            renderArrows(box, cells, color) {
+                this.context.fillStyle = color;
+                let cellSize = box.width / this.width;
+
+                let angle = 0;
+                for (let i = 0; i < cells.length; i++) {
+                    let cell = cells[i];
+                    if (i < cells.length - 1) {
+                        let nextCell = cells[i + 1];
+                        angle = Math.atan2(cell.x - nextCell.x, cell.y - nextCell.y)
+                    }
+
+                    this.drawArrow(
+                        cell.x * cellSize + cellSize / 2,
+                        cell.y * cellSize + cellSize / 2,
+                        cellSize / 3,
+                        cellSize / 6,
+                        angle,
+                    );
+                }
+            },
+            renderBorders(box, cells, color, directional) {
                 let lineWidth = this.constraintLineWidth;
                 this.context.strokeStyle = color;
                 this.context.lineWidth = lineWidth;
                 let cellSize = box.width / this.width;
                 for (let cell of cells) {
                     this.context.strokeRect(
-                        box.x + cell.x * cellSize + this.gridLineWidth*2,
-                        box.y + cell.y * cellSize + this.gridLineWidth*2,
+                        box.x + cell.x * cellSize + this.gridLineWidth * 2,
+                        box.y + cell.y * cellSize + this.gridLineWidth * 2,
                         cellSize - this.gridLineWidth * 5, cellSize - this.gridLineWidth * 5,
                     );
                 }
+                if (directional)
+                    this.renderArrows(box, cells, color);
             },
             renderSpecialCells(box, cells, color) {
                 this.context.fillStyle = color;
@@ -109,6 +154,98 @@
                         box.y + cell.y * cellSize,
                         cellSize, cellSize,
                     );
+                }
+            },
+            drawCellValue(x, y, text, color = 'black', box, cellSize) {
+                this.context.fillStyle = color;
+                let height = cellSize / 1.5;
+                this.context.font = `${height}px Arial`;
+                let {width} = this.context.measureText(text)
+                this.context.fillText(
+                    text,
+                    box.x + x * cellSize + cellSize / 2 - width / 2,
+                    box.y + y * cellSize + cellSize / 2 + height / 3,
+                    cellSize
+                );
+            },
+            drawCellDomain(x, y, domain, color, box, cellSize) {
+                this.context.fillStyle = color;
+                let height = cellSize / 4.5;
+                this.context.font = `600 ${height}px Arial`;
+
+                let text = domain.sort().join('');
+                let {width} = this.context.measureText(text);
+                let lines = [text];
+                if (width > cellSize * 0.8) {
+                    let halfLength = Math.floor(text.length / 2);
+                    lines = [text.substring(0, halfLength).trim(), text.substring(halfLength).trim()];
+                }
+                for (let i = 0; i < lines.length; i++) {
+                    let {width} = this.context.measureText(lines[i]);
+                    this.context.fillText(
+                        lines[i],
+                        box.x + x * cellSize + cellSize / 2 - width / 2,
+                        box.y + y * cellSize + cellSize / 1.3 - (lines.length * height / 1.35) + (height * 1.4) * i,
+                        cellSize,
+                    );
+                }
+            },
+            drawPencilMarks(x, y, pencilMarks, color, box, cellSize) {
+                let positions = [
+                    [0, 0],
+                    [1, 0],
+                    [0, 1],
+                    [1, 1],
+                    [0.5, 0],
+                    [0.5, 1],
+                    [0, 0.5],
+                    [1, 0.5],
+                ]
+                this.context.fillStyle = color;
+                let height = cellSize / 4.5;
+                this.context.font = `600 ${height}px Arial`;
+                let marks = [...pencilMarks].sort();
+                for (let i = 0; i < marks.length; i++) {
+                    let [posX, posY] = positions[i % positions.length];
+                    let {width} = this.context.measureText(marks[i]);
+                    let pad = cellSize * 0.07;
+                    this.context.fillText(
+                        marks[i],
+                        box.x + x * cellSize + pad + posX * (cellSize - pad * 2 - width),
+                        box.y + y * cellSize + pad + height + posY * (cellSize - pad * 2 - height),
+                        cellSize,
+                    )
+                }
+            },
+            renderSolution(box) {
+                let solution = this.solvability.result?.solutions?.[0];
+                if (solution) {
+                    let cellSize = box.width / this.width;
+
+                    for (let key in solution) {
+                        let [x, y] = key.split(',').map(n => +n);
+                        if (this.grid[y][x].hasValue)
+                            continue;
+                        let text = solution[key].toString();
+                        let color = this.themeColors.primary;
+                        this.drawCellValue(x, y, text, color, box, cellSize);
+                    }
+                }
+            },
+            renderConsistentDomains(box) {
+                let domains = this.solvability?.consistentDomains;
+                if (domains) {
+                    let cellSize = box.width / this.width;
+
+                    for (let key in domains) {
+                        let [x, y] = key.split(',').map(n => +n);
+                        let cell = this.grid[y][x];
+                        if (cell.hasValue)
+                            continue;
+                        let domain = domains[key];
+                        let color = this.themeColors.primary;
+                        this.drawCellDomain(x, y, domain, color, box, cellSize);
+                    }
                 }
             },
             renderCells(box) {
@@ -125,87 +262,33 @@
                         )
                     }
 
-                    // Domain
+                    // Domain value
                     if (cell.hasValue) {
-                        this.context.fillStyle = cell.hasSetValue ?
+                        let color = cell.hasSetValue ?
                             this.themeColors.softForeground :
                             this.themeColors.secondary;
-                        let height = cellSize / 1.5;
-                        this.context.font = `${height}px Arial`;
                         let text = cell.hasSetValue ? cell.domain[0] : [...cell.user.domain][0];
-                        let {width} = this.context.measureText(text)
-                        this.context.fillText(
-                            text,
-                            box.x + cell.x * cellSize + cellSize / 2 - width / 2,
-                            box.y + cell.y * cellSize + cellSize / 2 + height / 3,
-                            cellSize
-                        );
+                        this.drawCellValue(cell.x, cell.y, text, color, box, cellSize);
                     }
-                    // User Domain
-                    if (!cell.hasValue && (cell.hasUserDomain || cell.hasSetDomain(this.maxDomainLength))) {
-                        this.context.fillStyle = cell.hasUserDomain ?
-                            this.themeColors.secondary :
-                            this.themeColors.softForeground;
-                        let height = cellSize / 4.5;
-                        this.context.font = `600 ${height}px Arial`;
-                        // let text = [1,2,3,4,5,6,7,8].join(' ');
-                        let arr;
-                        if (cell.hasUserDomain)
-                            arr = Array.from(cell.user.domain);
-                        else
-                            arr = [...cell.domain];
-                        let text = arr.sort().join('');
-                        let {width} = this.context.measureText(text);
-                        let lines = [text];
-                        if (width > cellSize * 0.8) {
-                            let halfLength = Math.floor(text.length / 2);
-                            lines = [text.substring(0, halfLength).trim(), text.substring(halfLength).trim()];
-                        }
-                        for (let i = 0; i < lines.length; i++) {
-                            let {width} = this.context.measureText(lines[i]);
-                            this.context.fillText(
-                                lines[i],
-                                box.x + cell.x * cellSize + cellSize / 2 - width / 2,
-                                box.y + cell.y * cellSize + cellSize / 1.3 - (lines.length * height / 1.35) + (height * 1.4) * i,
-                                cellSize,
-                            );
+
+                    if (!this.options.solution && !this.options.consistentDomains) {
+                        // Domain multiple options
+                        if (!cell.hasValue && (cell.hasUserDomain || cell.hasSetDomain(this.maxDomainLength))) {
+                            let domain = cell.hasUserDomain ? Array.from(cell.user.domain) : [...cell.domain];
+                            let color = cell.hasUserDomain ?
+                                this.themeColors.secondary :
+                                this.themeColors.softForeground;
+                            this.drawCellDomain(cell.x, cell.y, domain, color, box, cellSize);
                         }
                     }
 
                     // Pencil marks
                     if (cell.hasPencilMarks && !cell.hasValue) {
-                        let positions = [
-                            [0, 0],
-                            [1, 0],
-                            [0, 1],
-                            [1, 1],
-                            [0.5, 0],
-                            [0.5, 1],
-                            [0, 0.5],
-                            [1, 0.5],
-                        ]
-                        this.context.fillStyle = cell.hasUserPencilMarks ?
+                        let color = cell.hasUserPencilMarks ?
                             this.themeColors.secondary :
                             this.themeColors.softForeground;
-                        let height = cellSize / 4.5;
-                        this.context.font = `600 ${height}px Arial`;
-                        let marks;
-                        if (cell.hasUserPencilMarks) {
-                            marks = [...cell.user.pencilMarks].sort();
-                        } else {
-                            marks = [...cell.pencilMarks].sort();
-                        }
-                        for (let i = 0; i < marks.length; i++) {
-                            let [posX, posY] = positions[i % positions.length];
-                            let {width} = this.context.measureText(marks[i]);
-                            let pad = cellSize * 0.07;
-                            this.context.fillText(
-                                marks[i],
-                                box.x + cell.x * cellSize + pad + posX * (cellSize - pad * 2 - width),
-                                box.y + cell.y * cellSize + pad + height + posY * (cellSize - pad * 2 - height),
-                                cellSize,
-                            )
-                        }
+                        let marks = cell.hasUserPencilMarks ? [...cell.user.pencilMarks].sort() : [...cell.pencilMarks].sort();
+                        this.drawPencilMarks(cell.x, cell.y, marks, color, box, cellSize);
                     }
                 }
             },
@@ -329,8 +412,9 @@
                 relevantCells: state => state.sudoku.relevantCells,
                 sameCells: state => state.sudoku.sameCells,
                 mode: state => state.sudoku.mode,
-                visualOptions: state => state.sudoku.visualOptions,
+                options: state => state.sudoku.options,
                 editingConstraint: state => state.sudoku.editingConstraint,
+                solvability: state => state.sudoku.solvability,
             }),
             ...mapGetters([
                 'maxDomainLength',

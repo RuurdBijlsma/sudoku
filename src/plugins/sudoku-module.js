@@ -3,6 +3,7 @@ import {Puzzle} from "puzzle-solver";
 import GridCell from "@/js/GridCell";
 import colorString from "color-string";
 import toWords from 'split-camelcase-to-words';
+import {getConsistentDomain, solve} from "@/js/WorkerSolve";
 
 export default {
     state: {
@@ -13,6 +14,13 @@ export default {
         sameCells: [],
         relevantCells: [],
         editingConstraint: null,
+        watchSolvability: 0,
+        solvability: {
+            solveWorkers: [],
+            consistencyWorkers: [],
+            result: null,
+            consistentDomains: null,
+        },
         selected: {
             domain: false,
             setDomain: false,
@@ -20,11 +28,14 @@ export default {
             color: '#ff0000ff',
         },
         dontChange: false,
-        visualOptions: {
+        options: {
+            autoSolve: true,
             constrained: false,
             same: true,
             relevant: true,
-            ...(localStorage.getItem('visualOptions') ? JSON.parse(localStorage.visualOptions) : {})
+            solution: false,
+            consistentDomains: false,
+            ...(localStorage.getItem('puzzleOptions') ? JSON.parse(localStorage.puzzleOptions) : {})
         },
         mode: 'domain',
         box: {x: 0, y: 0, width: 0, height: 0},
@@ -47,6 +58,11 @@ export default {
         ],
     },
     mutations: {
+        selectedCells: (state, selectedCells) => state.selectedCells = selectedCells,
+        consistentDomains: (state, consistentDomains) => state.solvability.consistentDomains = consistentDomains,
+        solvabilityResult: (state, result) => state.solvability.result = result,
+        watchSolvability: state => state.watchSolvability++,
+        unwatchSolvability: state => state.watchSolvability--,
         editingConstraint: (state, editingConstraint) => state.editingConstraint = editingConstraint,
         dontChange: (state, dontChange) => state.dontChange = dontChange,
         constraintCells: (state, constraintCells) => state.constraintCells = constraintCells,
@@ -58,6 +74,11 @@ export default {
         relevantCells: (state, relevantCells) => state.relevantCells = relevantCells,
     },
     getters: {
+        isSolved: state => !!state.solvability.result,
+        solvable: (state) => {
+            let solutionCount = state.solvability.result?.solutions?.length ?? 0;
+            return solutionCount === 0 ? 'no' : solutionCount === 1 ? 'unique' : 'yes';
+        },
         constraintTypes: () => Puzzle.constraintTypes,
         constraintTypeNames: (state, getters) => Object.keys(getters.constraintTypes).reduce((a, b) => {
             a[b] = toWords(b);
@@ -138,6 +159,28 @@ export default {
         }
     },
     actions: {
+        gridToPuzzle({state, getters}) {
+            let puzzle = state.puzzle.copy();
+            let grid = getters.flatGrid;
+            for (let cell of grid) {
+                let key = [cell.x, cell.y].toString();
+                let userDomain = [...cell.user.domain].map(n => isNaN(+n) ? n : +n);
+                let setDomain = [...cell.domain];
+                let userPencilMarks = [...cell.user.pencilMarks].map(n => isNaN(+n) ? n : +n);
+                let setPencilMarks = cell.pencilMarks;
+                let userColor = cell.user.color;
+                let setColor = cell.color;
+                let domain = userDomain.length === 0 ? setDomain : userDomain;
+                let pencilMarks = userPencilMarks.length === 0 ? setPencilMarks : userPencilMarks;
+                let color = userColor ?? setColor;
+                puzzle.domains[key] = domain;
+                if (color && color !== 'transparent')
+                    puzzle.colors[key] = color;
+                if (pencilMarks.length > 0)
+                    puzzle.pencilMarks[key] = pencilMarks;
+            }
+            return puzzle;
+        },
         clearCells({state, getters, dispatch}) {
             if (state.mode === 'color')
                 state.selectedCells.forEach(c => c.user.color = null);
@@ -176,9 +219,48 @@ export default {
                     dispatch('handleInput');
             }
         },
-        handleInput({dispatch}) {
+        handleInput({state, dispatch, commit}) {
             dispatch('updateCellInfo');
             dispatch('updateRelevantCells');
+            if (state.watchSolvability > 0 && state.options.autoSolve)
+                dispatch('updateSolvability');
+            else
+                commit('solvabilityResult', null);
+            if (state.watchSolvability > 0 && state.options.consistentDomains)
+                dispatch('updateConsistentDomains');
+            else
+                commit('consistentDomains', null);
+
+        },
+        stopSolving({state, commit}) {
+            let workers = state.solvability.solveWorkers;
+            workers.forEach(w => w.abort());
+            workers.splice(0, workers.length);
+            commit('solvabilityResult', null);
+        },
+        async updateSolvability({state, commit, dispatch}) {
+            let workers = state.solvability.solveWorkers;
+            workers.forEach(w => w.abort());
+            let abort = new AbortController();
+            workers.push(abort);
+
+            let result = await solve(await dispatch('gridToPuzzle'), 2, abort.signal);
+            if (!abort.signal.aborted)
+                commit('solvabilityResult', result);
+
+            workers.splice(workers.indexOf(abort), 1);
+        },
+        async updateConsistentDomains({state, commit, dispatch}) {
+            let workers = state.solvability.consistencyWorkers;
+            workers.forEach(w => w.abort());
+            let abort = new AbortController();
+            workers.push(abort);
+
+            let result = await getConsistentDomain(await dispatch('gridToPuzzle'), abort.signal);
+            if (!abort.signal.aborted)
+                commit('consistentDomains', result);
+
+            workers.splice(workers.indexOf(abort), 1);
         },
         updateRelevantConstraints({state, commit, getters}) {
             if (state.selectedCells.length === 0 || state.selectedCells.length > 21)
