@@ -1,7 +1,9 @@
 <template>
-    <v-list class="constraints-list">
-        <constraint-group :editable="editable" :group="puzzle.constraintGroups"></constraint-group>
-    </v-list>
+    <perfect-scrollbar class="scroller">
+        <v-list class="constraints-list">
+            <constraint-group :editable="editable" :group="puzzle.constraintGroups"></constraint-group>
+        </v-list>
+    </perfect-scrollbar>
 </template>
 
 <script>
@@ -27,7 +29,10 @@
 
 <style scoped>
     .constraints-list {
+    }
+    .scroller{
         max-height: 400px;
         overflow-y: auto;
+        position: relative;
     }
 </style>

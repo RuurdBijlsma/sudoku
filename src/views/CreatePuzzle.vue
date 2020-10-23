@@ -29,10 +29,23 @@
             // puzzle.pencilMarks[[3, 3]] = [1, 2, 3, 7, 8];
             // puzzle.domains[[3, 3]] = [1, 2, 3, 4];
             // // puzzle.domains[[0, 0]] = [1];
-            // let knight = new PuzzleConstraint({name: 'Knights move', type: 'knightsMove'});
-            // let king = new PuzzleConstraint({name: 'Kings move', type: 'kingsMove'});
-            // puzzle.addConstraint(king)
-            // puzzle.addConstraint(knight)
+            let thermometer = new PuzzleConstraint({
+                name: "Thermometer",
+                type: 'increasing',
+                variables: [[0, 0], [0, 1], [0, 2], [1, 3], [2, 3]],
+            });
+            let cage = new PuzzleConstraint({
+                name: "Cage",
+                type: 'sumsTo',
+                variables: [[5, 2], [5, 3], [6, 3]],
+                value: 6,
+            });
+            let knight = new PuzzleConstraint({name: 'Knights move', type: 'knightsMove'});
+            let king = new PuzzleConstraint({name: 'Kings move', type: 'kingsMove'});
+            puzzle.addConstraint(thermometer)
+            puzzle.addConstraint(knight)
+            puzzle.addConstraint(king)
+            puzzle.addConstraint(cage)
             // console.log(puzzle, knight)
             this.$store.commit('puzzle', puzzle);
         },
@@ -45,6 +58,6 @@
 <style scoped>
     .create-preset {
         height: 100%;
-        padding: 20px;
+        padding: 20px 20px 0;
     }
 </style>

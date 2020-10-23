@@ -101,6 +101,7 @@
                     this.constraint.name = this.constraintTypeNames[this.constraint.type] + value;
                 }
 
+
                 this.puzzle.addConstraint(this.constraint);
 
                 this.addSnack({text: 'Constraint added!'});
@@ -109,9 +110,20 @@
 
                 this.constraint = new PuzzleConstraint({...this.constraint, name: ''});
             },
-            ...mapActions(['updateRelevantConstraints', 'addSnack']),
+            ...mapActions(['updateRelevantConstraints', 'addSnack', 'getGridCells']),
         },
         watch: {
+            constraint: {
+                deep: true,
+                handler() {
+                    console.log("Change");
+                }
+            },
+            'constraint.type'(type) {
+                if (this.constraintTypes[type].global) {
+                    this.constraint.variables = [];
+                }
+            },
             'constraint.group'() {
                 if (this.constraint.group === '') {
                     this.constraint.group = null;
@@ -128,8 +140,9 @@
             selectionActive() {
                 return this.selectedCells.length > 0;
             },
-            ...mapGetters(['constraintTypes', 'constraintTypeNames']),
+            ...mapGetters(['constraintTypes', 'constraintTypeNames', 'grid']),
             ...mapState({
+                editingConstraint: state => state.sudoku.editingConstraint,
                 selectedCells: state => state.sudoku.selectedCells,
                 puzzle: state => state.sudoku.puzzle,
             }),

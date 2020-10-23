@@ -158,6 +158,11 @@ export default {
         }
     },
     actions: {
+        getGridCells({getters}, variables) {
+            return variables
+                .map(k => k.toString().split(',').map(n => +n))
+                .map(([x, y]) => getters.grid[y][x]);
+        },
         gridToPuzzle({state, getters}) {
             let puzzle = state.puzzle.copy();
             let grid = getters.flatGrid;

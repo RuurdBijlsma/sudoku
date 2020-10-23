@@ -2,6 +2,8 @@ import Vue from 'vue'
 import Vuex from 'vuex'
 import search from './search-module'
 import sudoku from './sudoku-module'
+import Vuetify from '../plugins/vuetify'
+import colorString from 'color-string';
 
 Vue.use(Vuex)
 
@@ -32,6 +34,26 @@ export default new Vuex.Store({
             let i = Math.floor(Math.random() * 7) + 1;
             return `img/user/${i}.png`;
         },
+        themeColors() {
+            return Vuetify.framework.theme.themes[Vuetify.framework.theme.isDark ? 'dark' : 'light'];
+        },
+        opaqueThemeColors: (state, getters) => {
+            let colors = JSON.parse(JSON.stringify(getters.themeColors));
+            let toOpaque;
+            toOpaque = object => {
+                for (let key in object) {
+                    let value = object[key];
+                    if (typeof value === "string") {
+                        let [r, g, b,] = colorString.get.rgb(value);
+                        object[key] = colorString.to.hex([r, g, b, 1]);
+                    } else {
+                        toOpaque(value);
+                    }
+                }
+                return object;
+            }
+            return toOpaque(colors);
+        }
     },
     actions: {
         addSnack: async ({state, commit}, {text, timeout = 3000}) => {

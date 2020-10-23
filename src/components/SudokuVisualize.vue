@@ -51,13 +51,16 @@
                 if (this.puzzle === null || this.width === 0 || this.height === 0)
                     return;
 
+                this.renderConstraints(this.box);
 
                 if (this.options.relevant)
                     this.renderSpecialCells(this.box, this.relevantCells, this.themeColors.sudoku.relevant);
                 if (this.options.same)
                     this.renderSpecialCells(this.box, this.sameCells, this.themeColors.sudoku.same);
                 this.renderSpecialCells(this.box, this.selectedCells, this.themeColors.sudoku.selection);
+
                 this.renderCells(this.box);
+
                 if (this.options.solution)
                     this.renderSolution(this.box);
                 else if (this.options.consistentDomains)
@@ -77,18 +80,111 @@
                     }
                 }
 
-                let visualConstraint = this.selectedConstraint !== null || this.editingConstraint;
+                let visualConstraint = this.selectedConstraint !== null || this.editingConstraint !== null;
                 if (this.options.constrained && !visualConstraint)
                     this.renderBorders(this.box, this.constrainedFromSelection, this.themeColors.sudoku.constrained, false);
                 else if (this.editingConstraint) {
-                    //todo improve speed of this
-                    let cells = this.editingConstraint.variables
-                        .map(v => v.toString().split(',').map(n => +n))
-                        .map(([x, y]) => this.grid[y][x]);
-                    this.renderBorders(this.box, cells, this.themeColors.sudoku.constraint,
-                        this.constraintTypes[this.editingConstraint.type].directional ?? false);
+                    this.renderBorders(this.box, this.editingConstraint?.cells, this.themeColors.sudoku.constraint,
+                        this.constraintTypes[this.editingConstraint.constraint.type].directional ?? false);
                 } else if (this.selectedConstraint)
                     this.renderBorders(this.box, this.selectedConstraint?.cells, this.themeColors.sudoku.constraint, this.selectedConstraint.directional);
+            },
+            drawCage(coordinates, value, cellSize) {
+                let padding = cellSize / 10;
+                let paddedSize = cellSize - padding;
+                let stringCoordinates = coordinates.map(n => n.toString());
+                let getNeighbours = ([x, y]) => {
+                    return [
+                        [x, y - 1], // top
+                        [x + 1, y], // right
+                        [x, y + 1], // bottom
+                        [x - 1, y], // left
+                    ]
+                }
+                let cellEdges = coordinates.map(coordinate => {
+                    let edges = [];
+                    for (let neighbour of getNeighbours(coordinate))
+                        edges.push(stringCoordinates.includes(neighbour.toString()));
+                    let [top, right, bottom, left] = edges
+                    return {coordinate, edges: {top, right, bottom, left}}
+                });
+                let getPoints = (x, y) => ({
+                    top: [[x, y + padding], [x + cellSize, y + padding]],
+                    right: [[x + paddedSize, y], [x + paddedSize, y + cellSize]],
+                    bottom: [[x, y + paddedSize], [x + cellSize, y + paddedSize]],
+                    left: [[x + padding, y], [x + padding, y + cellSize]],
+                });
+                this.context.setLineDash([cellSize / 20, cellSize / 10]);
+                this.context.lineWidth = cellSize / 32;
+                this.context.strokeStyle = this.themeColors.sudoku.cage;
+                for (let cell of cellEdges) {
+                    let [x, y] = cell.coordinate.map(n => n * cellSize);
+                    let points = getPoints(x, y);
+                    // Top left XY
+                    this.context.beginPath();
+                    for (let key in cell.edges) {
+                        if (cell.edges[key])
+                            continue;
+                        let sidePoints = points[key];
+                        this.context.moveTo(...sidePoints[0]);
+                        for (let [pX, pY] of sidePoints.slice(1)) {
+                            this.context.lineTo(pX, pY);
+                        }
+                    }
+                    this.context.stroke();
+                }
+                this.context.setLineDash([]);
+
+                let top = Infinity;
+                let right = null;
+                for (let [x, y] of coordinates) {
+                    if (y < top) {
+                        top = y;
+                        right = x;
+                    }
+                    if (y === top && x > right)
+                        right = x;
+                }
+                let height = cellSize / 4.5;
+                this.context.font = `400 ${height}px Arial`;
+                this.context.fillStyle = this.themeColors.sudoku.cage;
+                let {width} = this.context.measureText(value);
+                this.context.fillText(value, right * cellSize + paddedSize - width - padding / 2, top * cellSize + padding + height);
+            },
+            drawThermometer(coordinates, cellSize) {
+                if (coordinates.length < 2)
+                    return;
+
+                this.context.strokeStyle = this.themeColors.sudoku.thermometer;
+                this.context.fillStyle = this.themeColors.sudoku.thermometer;
+
+                let [x, y] = coordinates[0].map(n => n * cellSize + cellSize / 2);
+
+                this.context.beginPath();
+                this.context.arc(x, y, cellSize / 3, 0, 2 * Math.PI);
+                this.context.fill();
+
+                this.context.lineWidth = cellSize / 3;
+                this.context.lineCap = 'round';
+                this.context.beginPath();
+                this.context.moveTo(x, y);
+                for (let [x, y] of coordinates.slice(1).map(c => c.map(n => n * cellSize + cellSize / 2)))
+                    this.context.lineTo(x, y);
+                this.context.stroke();
+            },
+            renderConstraints(box) {
+                let cellSize = box.width / this.width;
+                const getCoordinates = variables => variables.map(v => v.toString().split(',').map(n => +n));
+                for (let constraint of this.puzzle.constraints) {
+                    switch (constraint.type) {
+                        case 'increasing':
+                            this.drawThermometer(getCoordinates(constraint.variables), cellSize);
+                            break;
+                        case 'sumsTo':
+                            this.drawCage(getCoordinates(constraint.variables), constraint.value, cellSize);
+                            break;
+                    }
+                }
             },
             rotate(cx, cy, x, y, radians) {
                 const cos = Math.cos(radians),
@@ -109,7 +205,8 @@
                 this.context.stroke();
             },
             renderArrows(box, cells, color) {
-                this.context.fillStyle = color;
+                this.context.fillStyle = this.opaqueThemeColors.sudoku.constraint;
+                this.context.strokeStyle = this.opaqueThemeColors.sudoku.constraint;
                 let cellSize = box.width / this.width;
 
                 let angle = 0;
@@ -402,9 +499,6 @@
             boxLineWidth() {
                 return this.box.width / 150;
             },
-            themeColors() {
-                return this.$vuetify.theme.themes[this.$vuetify.theme.isDark ? 'dark' : 'light'];
-            },
             ...mapState({
                 box: state => state.sudoku.box,
                 puzzle: state => state.sudoku.puzzle,
@@ -427,6 +521,8 @@
                 'height',
                 'flatGrid',
                 'grid',
+                'themeColors',
+                'opaqueThemeColors',
             ]),
         }
     }

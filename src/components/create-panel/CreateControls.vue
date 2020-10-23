@@ -24,7 +24,7 @@
         </custom-expando>
 
         <custom-expando name="Edit constraint" default-show v-if="editingConstraint">
-            <edit-constraint :edit-constraint="editingConstraint"></edit-constraint>
+            <edit-constraint :edit-constraint="editingConstraint.constraint"></edit-constraint>
         </custom-expando>
 
         <custom-expando name="Create constraints">
@@ -58,9 +58,17 @@
             this.$store.commit('unwatchSolvability');
         },
         methods: {
-            ...mapActions(['updateSolvability','stopSolving', 'updateConsistentDomains'])
+            ...mapActions(['updateSolvability', 'stopSolving', 'updateConsistentDomains', 'getGridCells'])
         },
         watch: {
+            'editingConstraint.constraint.variables': {
+                deep: true,
+                async handler(v) {
+                    console.log('change v', v);
+                    if (v)
+                        this.editingConstraint.cells = await this.getGridCells(v);
+                }
+            },
             'options.autoSolve'(value) {
                 if (value)
                     this.updateSolvability();
@@ -72,7 +80,7 @@
                     this.options.consistentDomains = false;
             },
             'options.consistentDomains'(value) {
-                if (value){
+                if (value) {
                     this.updateConsistentDomains();
                     this.options.solution = false;
                 }

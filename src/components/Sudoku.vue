@@ -2,7 +2,9 @@
     <div class="sudoku" v-if="puzzle !== null"
          ref="sudoku"
          v-click-outside="deselectAll">
-        <create-controls class="panel"></create-controls>
+        <perfect-scrollbar class="scroller">
+            <create-controls class="create panel"></create-controls>
+        </perfect-scrollbar>
 
         <div tabindex="1" @keydown="keyPress" class="play-area">
             <div class="sudoku-panel panel">
@@ -19,7 +21,9 @@
                 </div>
             </div>
 
-            <play-controls class="panel"></play-controls>
+            <perfect-scrollbar class="scroller">
+                <play-controls class="play panel"></play-controls>
+            </perfect-scrollbar>
         </div>
     </div>
 </template>
@@ -38,9 +42,9 @@
     // add editable prop to sudoku.vue to show Create panel and stuff
     // add mobile support
     // check if parameter count of custom function matches selected variable count
-    // add visuals for cages/thermometers
     // show direction of constraint cells
     // update solvability and arc consistency when changing constraints in any way (edit/create/delete)
+    // when publishing convert thermometers/background to data url images?
 
     export default {
         name: "Sudoku",
@@ -242,13 +246,22 @@
         width: 100%;
     }
 
+    .scroller {
+        max-height: 100%;
+        overflow-y: auto;
+        position: relative;
+    }
+
     .panel {
         display: inline-flex;
+    }
+
+    .create {
         margin-right: 1em;
     }
 
-    .panel:last-child {
-        margin-right: 0;
+    .play {
+        margin-left: 1em;
     }
 
     .sudoku-panel {

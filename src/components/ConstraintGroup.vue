@@ -25,7 +25,7 @@
                 <v-list-item-subtitle>{{constraint.type}}</v-list-item-subtitle>
             </v-list-item-content>
             <v-list-item-action v-if="editable">
-                <v-btn :color="editingConstraint===constraint ? 'primary' : 'default'"
+                <v-btn :color="currentConstraint===constraint ? 'primary' : 'default'"
                        icon
                        @click="toggleEditConstraint(constraint)">
                     <v-icon>mdi-puzzle-edit-outline</v-icon>
@@ -36,7 +36,7 @@
 </template>
 
 <script>
-    import {mapGetters, mapState} from "vuex";
+    import {mapActions, mapGetters, mapState} from "vuex";
 
     export default {
         name: "ConstraintGroup",
@@ -59,26 +59,33 @@
         },
         methods: {
             toggleEditConstraint(constraint) {
-                this.$store.commit('editingConstraint', this.editingConstraint === constraint ? null : constraint)
+                let cells = constraint.variables
+                    .map(v => v.toString().split(',').map(n => +n))
+                    .map(([x, y]) => this.grid[y][x]);
+                this.$store.commit('editingConstraint', this.currentConstraint === constraint ? null : {
+                    constraint,
+                    cells,
+                });
                 this.$store.dispatch('updateRelevantConstraints');
             },
             stopVisualize() {
                 this.$store.commit('selectedConstraint', null);
             },
-            visualizeConstraint(constraint) {
+            async visualizeConstraint(constraint) {
                 if (constraint.variables) {
-                    let cells = constraint.variables
-                        .map(k => k.toString().split(',')
-                            .map(n => +n))
-                        .map(([x, y]) => this.$store.getters.grid[y][x]);
+                    let cells = await this.getGridCells(constraint.variables);
                     this.$store.commit('selectedConstraint', {
                         directional: this.constraintTypes[constraint.type]?.directional,
                         cells
                     })
                 }
             },
+            ...mapActions(['getGridCells'])
         },
         computed: {
+            currentConstraint() {
+                return this.editingConstraint?.constraint;
+            },
             constraints() {
                 return this.group.constraints ?? [];
             },
@@ -90,7 +97,7 @@
             ...mapState({
                 editingConstraint: state => state.sudoku.editingConstraint,
             }),
-            ...mapGetters(['constraintTypes'])
+            ...mapGetters(['constraintTypes', 'grid'])
         },
     }
 </script>
