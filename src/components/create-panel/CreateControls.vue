@@ -64,7 +64,6 @@
             'editingConstraint.constraint.variables': {
                 deep: true,
                 async handler(v) {
-                    console.log('change v', v);
                     if (v)
                         this.editingConstraint.cells = await this.getGridCells(v);
                 }

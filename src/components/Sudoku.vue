@@ -45,6 +45,7 @@
     // show direction of constraint cells
     // update solvability and arc consistency when changing constraints in any way (edit/create/delete)
     // when publishing convert thermometers/background to data url images?
+    // IT SEEMS TOO MANY WOREKRS ARE SPAWNED AND NOT KILLED! WHEN EDITING A CONSTRAINT AND STUFF YEA
 
     export default {
         name: "Sudoku",

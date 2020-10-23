@@ -252,7 +252,8 @@ export default {
             if (!abort.signal.aborted)
                 commit('solvabilityResult', result);
 
-            workers.splice(workers.indexOf(abort), 1);
+            workers.forEach(w => w.abort());
+            workers.splice(0, workers.length);
         },
         async updateConsistentDomains({state, commit, dispatch}) {
             let workers = state.solvability.consistencyWorkers;
@@ -264,7 +265,8 @@ export default {
             if (!abort.signal.aborted)
                 commit('consistentDomains', result);
 
-            workers.splice(workers.indexOf(abort), 1);
+            workers.forEach(w => w.abort());
+            workers.splice(0, workers.length);
         },
         updateRelevantConstraints({state, commit, getters}) {
             if (state.selectedCells.length === 0 || state.selectedCells.length > 21)

@@ -83,6 +83,7 @@
                     this.addSnack({text: "Removed constraint from puzzle"});
                     this.updateRelevantConstraints();
                     this.$store.commit('editingConstraint', null);
+                    this.updateAllSolvability();
                 } else
                     this.addSnack({text: "Couldn't remove constraint from puzzle"});
             },
@@ -103,6 +104,7 @@
 
 
                 this.puzzle.addConstraint(this.constraint);
+                this.updateAllSolvability();
 
                 this.addSnack({text: 'Constraint added!'});
                 this.updateRelevantConstraints();
@@ -110,13 +112,26 @@
 
                 this.constraint = new PuzzleConstraint({...this.constraint, name: ''});
             },
-            ...mapActions(['updateRelevantConstraints', 'addSnack', 'getGridCells']),
+            updateAllSolvability() {
+                console.log("Updagint all solvigil");
+                if (this.options.autoSolve) {
+                    this.updateSolvability();
+                }
+                if (this.options.consistentDomains) {
+                    this.updateConsistentDomains()
+                }
+            },
+            ...mapActions(['updateRelevantConstraints', 'addSnack', 'getGridCells', 'updateSolvability', 'updateConsistentDomains']),
         },
         watch: {
-            constraint: {
-                deep: true,
-                handler() {
-                    console.log("Change");
+            'constraint.variables'() {
+                this.updateAllSolvability();
+            },
+            'constraint.value'(v) {
+                if (this.typeOptions.value === 'number' && typeof this.constraint.value !== 'number') {
+                    this.constraint.value = +v;
+                } else {
+                    this.updateAllSolvability();
                 }
             },
             'constraint.type'(type) {
@@ -145,6 +160,7 @@
                 editingConstraint: state => state.sudoku.editingConstraint,
                 selectedCells: state => state.sudoku.selectedCells,
                 puzzle: state => state.sudoku.puzzle,
+                options: state => state.sudoku.options,
             }),
             existing() {
                 return this.puzzle.constraints.includes(this.constraint);

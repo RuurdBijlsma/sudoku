@@ -57,6 +57,12 @@
         },
         beforeDestroy() {
             window.removeEventListener('resize', this.setWindowWidth);
+            let sWorkers = this.$store.state.sudoku.solvability.solveWorkers;
+            let cWorkers = this.$store.state.sudoku.solvability.consistencyWorkers;
+            sWorkers.forEach(c => c.abort());
+            cWorkers.forEach(c => c.abort());
+            sWorkers.splice(0, sWorkers.length - 1);
+            cWorkers.splice(0, cWorkers.length - 1);
         },
         methods: {
             setWindowWidth() {
