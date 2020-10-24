@@ -6,8 +6,8 @@ export default class GridCell {
         this.pencilMarks = pencilMarks;
         this.color = color;
         this.user = {
-            domain: new Set(),
-            pencilMarks: new Set(),
+            domain: [],
+            pencilMarks: [],
             color: null,
         }
     }
@@ -33,7 +33,7 @@ export default class GridCell {
     }
 
     get hasUserPencilMarks() {
-        return this.user.pencilMarks.size > 0;
+        return this.user.pencilMarks.length > 0;
     }
 
     get hasValue() {
@@ -45,7 +45,11 @@ export default class GridCell {
     }
 
     get hasUserValue() {
-        return this.user.domain.size === 1;
+        return this.user.domain.length === 1;
+    }
+
+    hasDomain(maxDomainLength) {
+        return this.hasSetDomain(maxDomainLength) || this.hasUserDomain;
     }
 
     hasSetDomain(maxDomainLength) {
@@ -53,7 +57,7 @@ export default class GridCell {
     }
 
     get hasUserDomain() {
-        return this.user.domain.size > 1;
+        return this.user.domain.length > 1;
     }
 
     static get maxDomainSize() {

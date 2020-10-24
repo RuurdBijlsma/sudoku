@@ -1,5 +1,5 @@
 <template>
-    <v-app class="app">
+    <v-app class="app" :style="cssProps">
         <tool-bar></tool-bar>
         <v-navigation-drawer
                 v-if="$store.getters.scale >= 2"
@@ -43,6 +43,7 @@
 <script>
     import NavContent from "@/components/NavContent";
     import ToolBar from "@/components/ToolBar";
+    import {mapGetters} from "vuex";
 
     export default {
         name: 'App',
@@ -70,6 +71,23 @@
             },
         },
         computed: {
+            cssProps () {
+                console.log(this.$vuetify.theme);
+                return {
+                    '--primary': this.themeColors.primary,
+                    '--selection': this.themeColors.sudoku.selection,
+                    '--constraint': this.themeColors.sudoku.constraint,
+                    '--constrained': this.themeColors.sudoku.constrained,
+                    '--same': this.themeColors.sudoku.same,
+                    '--relevant': this.themeColors.sudoku.relevant,
+                    '--thermometer': this.themeColors.sudoku.thermometer,
+                    '--cage': this.themeColors.sudoku.cage,
+                    '--foreground': this.themeColors.foreground,
+                    '--soft-foreground': this.themeColors.softForeground,
+                    '--primary-light': this.themeColors.primaryLight,
+                    '--secondary': this.themeColors.secondary,
+                }
+            },
             navigation() {
                 let search = this.$store.getters.scale < 2 ? [{
                     icon: 'mdi-magnify',
@@ -82,6 +100,7 @@
                     ...search,
                 ]
             },
+            ...mapGetters(['themeColors'])
         }
     };
 </script>

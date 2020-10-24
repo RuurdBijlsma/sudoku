@@ -191,29 +191,28 @@ export default {
 
             for (let cell of getters.editableCells) {
                 if (state.mode !== 'color') {
-                    cell.user[state.mode].clear();
+                    cell.user[state.mode].splice(0, cell.user[state.mode].length);
                     dispatch('updateCellInfo');
                 }
             }
             dispatch('handleInput');
         },
         setCellsValue({getters, dispatch}, {type, value}) {
-            value = value.toString();
             if (type !== 'color') {
-                let isInDomain = getters.editableCells?.[0]?.user?.[type]?.has(value);
+                let isInDomain = getters.editableCells?.[0]?.user?.[type]?.includes?.(value);
 
                 let change = false;
                 for (let cell of getters.editableCells) {
                     let collection = cell.user[type];
                     if (isInDomain) {
-                        collection.delete(value);
+                        collection.splice(collection.indexOf(value), 1);
                         change = true;
                     } else {
                         let maxSize = type === 'domain' ?
                             GridCell.maxDomainSize :
                             GridCell.maxPencilMarksSize;
-                        if (collection.size < maxSize) {
-                            collection.add(value);
+                        if (collection.length < maxSize) {
+                            collection.push(value);
                             change = true;
                         }
                     }
@@ -321,14 +320,14 @@ export default {
                 getters.flatGrid.filter(cell => {
                     if (state.selectedCells.includes(cell))
                         return false;
-                    let value = commonDomain[0].toString();
-                    if (cell.user.domain.has(value))
+                    let value = commonDomain[0];
+                    if (cell.user.domain.includes(value))
                         return true;
-                    let pencilMarks = cell.hasUserPencilMarks ? [...cell.user.pencilMarks] : cell.pencilMarks.map(p => p.toString());
+                    let pencilMarks = cell.hasUserPencilMarks ? cell.user.pencilMarks : cell.pencilMarks;
                     if (!cell.hasValue && pencilMarks.includes(value))
                         return true
                     if (!cell.hasValue && cell.domain.length < getters.maxDomainLength)
-                        return cell.domain.map(p => p.toString()).includes(value);
+                        return cell.domain.includes(value);
                     return false;
                 }) : [];
             relevantCells = relevantCells.filter(c => !sameCells.includes(c))

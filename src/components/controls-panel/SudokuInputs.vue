@@ -8,7 +8,7 @@
         <div class="control-grid numbers" v-if="mode !== 'color'">
             <v-btn
                     @click="setCellsValue({type: mode, value: i})"
-                    :color="selected[mode] && selected[mode].includes(i.toString()) ? 'secondary' : 'default'"
+                    :color="selected[mode] && selected[mode].includes(i) ? 'secondary' : 'default'"
                     class="number-button"
                     large fab
                     v-for="i in 9" :key="i">{{i}}
