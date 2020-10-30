@@ -204,7 +204,7 @@
                     this.context.lineTo(x, y);
                 this.context.stroke();
             },
-            renderArrows(box, cells, color) {
+            renderArrows(box, cells) {
                 this.context.fillStyle = this.opaqueThemeColors.sudoku.constraint;
                 this.context.strokeStyle = this.opaqueThemeColors.sudoku.constraint;
                 let cellSize = box.width / this.width;
@@ -413,19 +413,19 @@
                     return false;
                 let lineWidth = this.boxLineWidth;
                 let cellSize = box.width / this.width;
-                let verticalLines = this.width / this.blockSize - 1;
-                let horizontalLines = this.height / this.blockSize - 1;
+                let verticalLines = this.width / this.boxSize - 1;
+                let horizontalLines = this.height / this.boxSize - 1;
 
                 this.context.beginPath();
                 this.context.strokeStyle = this.themeColors.softForeground;
                 this.context.lineWidth = lineWidth;
                 for (let x = 1; x <= verticalLines; x++) {
-                    this.context.moveTo(box.x + x * this.blockSize * cellSize - lineWidth / 2, box.y);
-                    this.context.lineTo(box.x + x * this.blockSize * cellSize - lineWidth / 2, box.y + box.height);
+                    this.context.moveTo(box.x + x * this.boxSize * cellSize - lineWidth / 2, box.y);
+                    this.context.lineTo(box.x + x * this.boxSize * cellSize - lineWidth / 2, box.y + box.height);
                 }
                 for (let y = 1; y <= horizontalLines; y++) {
-                    this.context.moveTo(box.x, box.y + y * this.blockSize * cellSize - lineWidth / 2);
-                    this.context.lineTo(box.x + box.width, box.y + y * this.blockSize * cellSize - lineWidth / 2);
+                    this.context.moveTo(box.x, box.y + y * this.boxSize * cellSize - lineWidth / 2);
+                    this.context.lineTo(box.x + box.width, box.y + y * this.boxSize * cellSize - lineWidth / 2);
                 }
                 this.context.stroke();
             },
@@ -515,7 +515,7 @@
             ...mapGetters([
                 'constraintTypes',
                 'maxDomainLength',
-                'blockSize',
+                'boxSize',
                 'hasBoxes',
                 'width',
                 'height',

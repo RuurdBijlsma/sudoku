@@ -8,15 +8,15 @@
 
         <div tabindex="1" @keydown="keyPress" class="play-area">
             <div class="sudoku-panel panel">
-                <!--                <sudoku-visualize-->
-                <!--                        @mousedown.native="mouseDown"-->
-                <!--                        ref="sudokuVisualize"-->
-                <!--                        :cursor="cursor"-->
-                <!--                        :puzzle="puzzle"></sudoku-visualize>-->
-                <html-visualize @mousedown.native="mouseDown"
-                                ref="sudokuVisualize"
-                                :cursor="cursor"
-                                :puzzle="puzzle"></html-visualize>
+                <sudoku-visualize
+                        @mousedown.native="mouseDown"
+                        ref="sudokuVisualize"
+                        :cursor="cursor"
+                        :puzzle="puzzle"></sudoku-visualize>
+                <!--                <html-visualize @mousedown.native="mouseDown"-->
+                <!--                                ref="sudokuVisualize"-->
+                <!--                                :cursor="cursor"-->
+                <!--                                :puzzle="puzzle"></html-visualize>-->
                 <div class="possible-values" v-if="selected.setDomain">
                     <h4>Possible values</h4>
                     <v-chip-group>
@@ -119,12 +119,18 @@
             eventToPos(e) {
                 if (!this.boardElement)
                     return [0, 0, 0, 0];
-                let {left, top} = this.boardElement.getBoundingClientRect();
-                let x = e.pageX - left;
-                let y = e.pageY - top;
-                let puzzleX = e.pageX - this.box.x;
-                let puzzleY = e.pageY - this.box.y;
-                return [x, y, puzzleX, puzzleY];
+                if (false) { // html visualize
+                    let puzzleX = e.pageX - this.box.x;
+                    let puzzleY = e.pageY - this.box.y;
+                    return [0, 0, puzzleX, puzzleY];
+                } else { // canvas visualize
+                    let {left, top} = this.boardElement.getBoundingClientRect();
+                    let x = e.pageX - left;
+                    let y = e.pageY - top;
+                    let puzzleX = x - this.box.x;
+                    let puzzleY = y - this.box.y;
+                    return [x, y, puzzleX, puzzleY];
+                }
             },
             dragCanvas(e) {
                 let [, , puzzleX, puzzleY] = this.eventToPos(e);
@@ -174,7 +180,7 @@
                         this.clearCells();
                         break;
                     default:
-                        if (key.length === 1 && (this.mode === 'domain' || this.mode === 'pencilMarks')){
+                        if (key.length === 1 && (this.mode === 'domain' || this.mode === 'pencilMarks')) {
                             let value = isNaN(+key) ? key : +key;
                             this.setCellsValue({type: this.mode, value});
                         }

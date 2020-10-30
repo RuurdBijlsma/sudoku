@@ -111,8 +111,10 @@ export default {
                 if (cell.domain.length > max) max = cell.domain.length;
             return max;
         },
-        blockSize(state) {
+        boxSize(state) {
             let blockConstraint = state.puzzle.constraints.find(c => c.name.includes('Block'));
+            if (!blockConstraint)
+                return 0;
             return Math.sqrt(blockConstraint.variables.length);
         },
         hasBoxes(state) {

@@ -16,7 +16,14 @@
                             bordersCells.cells.includes(cell) ? bordersCells.color : 'transparent'
                         ),
                 }">
-                    <div class="cell value" v-if="cell.hasSetValue">
+                    <div class="cell value solution" v-if="options.solution && options.autoSolve && solvability.result">
+                        {{getSolutionValue(cell.x, cell.y)}}
+                    </div>
+                    <div class="cell domain solution"
+                         v-else-if="options.consistentDomains && solvability.consistentDomains">
+                        {{getSolutionDomain(cell.x, cell.y).join('')}}
+                    </div>
+                    <div class="cell value" v-else-if="cell.hasSetValue">
                         {{cell.domain[0]}}
                     </div>
                     <div class="cell domain" v-else-if="cell.hasSetDomain(maxDomainLength)">
@@ -41,6 +48,10 @@
                 </div>
             </div>
         </div>
+        <canvas class="canvas" ref="canvas"></canvas>
+        <div class="boxes" v-if="parentBox">
+            <div class="box" v-for="_ in boxCount"></div>
+        </div>
     </div>
 </template>
 
@@ -64,20 +75,36 @@
         },
         data: () => ({
             parentBox: null,
+            canvas: null,
+            context: null,
         }),
         mounted() {
+            this.canvas = this.$refs.canvas;
+            this.context = this.canvas.getContext('2d');
             window.addEventListener('resize', this.windowResize, false);
             this.windowResize();
+            this.updateCanvas();
         },
         beforeDestroy() {
             window.addEventListener('resize', this.windowResize, false);
         },
         methods: {
+            updateCanvas() {
+
+            },
+            getSolutionDomain(x, y) {
+                return this.solvability?.consistentDomains?.[[x, y]];
+            },
+            getSolutionValue(x, y) {
+                return this.solvability?.result?.solutions?.[0]?.[[x, y]];
+            },
             windowResize() {
                 let parent = this.$refs.parent;
                 this.parentBox = parent.getBoundingClientRect();
                 let ratio = this.width / this.height;
                 let height = this.parentBox.width / ratio;
+                this.canvas.width = this.parentBox.width;
+                this.canvas.height = height;
                 parent.style.setProperty('--parent-width', this.parentBox.width + 'px');
                 parent.style.setProperty('--parent-height', height + 'px');
                 parent.style.setProperty('--cell-size', this.parentBox.width / this.width + 'px');
@@ -121,10 +148,15 @@
                 } : this.selectedConstraint !== null ? {
                     cells: this.selectedConstraint.cells,
                     color: this.themeColors.sudoku.constraint
-                } : {
+                } : this.options.constrained ? {
                     cells: this.constrainedFromSelection,
                     color: this.themeColors.sudoku.constrained
-                };
+                } : {cells: [], color: null}
+            },
+            boxCount() {
+                let xBoxes = Math.floor(this.width / this.boxSize);
+                let yBoxes = Math.floor(this.height / this.boxSize);
+                return xBoxes * yBoxes;
             },
             ...mapState({
                 box: state => state.sudoku.box,
@@ -142,7 +174,7 @@
             ...mapGetters([
                 'constraintTypes',
                 'maxDomainLength',
-                'blockSize',
+                'boxSize',
                 'hasBoxes',
                 'width',
                 'height',
@@ -165,7 +197,30 @@
         background-color: var(--primary-light);
     }
 
+    .canvas {
+        margin-top: -100%;
+        display: flex;
+    }
+
+    .boxes {
+        pointer-events: none;
+        z-index: 2;
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        margin-top: -100%;
+    }
+
+    .box {
+        width: 100%;
+        height: 100%;
+        box-shadow: inset 0 0 0 calc(var(--parent-width) / 200) var(--soft-foreground);
+    }
+
     .cell-grid {
+        z-index: 1;
         height: 100%;
         display: grid;
         grid-template-columns: repeat(9, 1fr);
@@ -201,6 +256,10 @@
 
     .user {
         color: var(--secondary);
+    }
+
+    .solution {
+        color: var(--primary);
     }
 
     .value {

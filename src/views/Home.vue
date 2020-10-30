@@ -16,21 +16,11 @@
         },
         methods: {
             async timeSolve() {
-                let puzzle = Puzzle.presets.getSudoku();
+                let response = await fetch('./wasmtest.wasm');
+                let bytes = await response.arrayBuffer();
+                let wasm = await WebAssembly.instantiate(bytes)
 
-                console.log("Solving puzzles", puzzle);
-                let concurrentCount = 20;
-                let promises = [...Array(concurrentCount)].map((_, i) => {
-                    let puzz = puzzle.copy();
-                    puzz.domains[[0, i % 9]] = [Math.floor(Math.random() * 10)];
-                    console.log(puzz.consistentDomains);
-                    return solve(puzz, 2)
-                });
-                console.log(promises);
-                let now = performance.now();
-                await Promise.all(promises);
-                let time = performance.now() - now;
-                console.log(`Time for running solve ${concurrentCount} times: ${time}`);
+                console.log(wasm);
             },
         },
     }
